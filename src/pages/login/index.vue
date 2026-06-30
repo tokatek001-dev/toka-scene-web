@@ -1,218 +1,291 @@
 <template>
-  <div class="min-h-screen flex flex-col lg:flex-row" :style="{ height: isElectron ? 'calc(100vh - 32px)' : '100vh' }">
-    <!-- Left branding panel (hidden on mobile) -->
-    <div class="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 to-slate-800 dark:from-slate-950 dark:to-slate-900 items-center justify-center p-12">
-      <div class="flex flex-col items-center text-center space-y-8">
-        <!-- Logo -->
-        <div class="flex items-center gap-4">
-          <div class="w-20 h-20 bg-white dark:bg-slate-100 rounded-lg flex items-center justify-center">
-            <div class="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-400 rounded-md"></div>
-          </div>
-          <div class="text-left">
-            <h1 class="text-4xl font-bold text-white">ToonFlow</h1>
-            <p class="text-slate-300 text-sm">{{ $t("login.slogan") }}</p>
+  <div
+    class="min-h-screen flex"
+    :style="{ height: isElectron ? 'calc(100vh - 32px)' : '100vh' }"
+  >
+    <!-- Left branding panel -->
+    <div
+      class="hidden lg:flex lg:w-[52%] relative overflow-hidden flex-col items-center justify-center p-14"
+      style="background: linear-gradient(135deg, #0f0c29 0%, #1a1560 45%, #24243e 100%)"
+    >
+      <!-- Ambient glow orbs -->
+      <div
+        class="absolute top-[-80px] left-[-80px] w-[400px] h-[400px] rounded-full opacity-20 blur-3xl pointer-events-none"
+        style="background: radial-gradient(circle, #6366f1, transparent)"
+      />
+      <div
+        class="absolute bottom-[-60px] right-[-60px] w-[350px] h-[350px] rounded-full opacity-15 blur-3xl pointer-events-none"
+        style="background: radial-gradient(circle, #8b5cf6, transparent)"
+      />
+
+      <!-- Content -->
+      <div class="relative z-10 max-w-sm w-full space-y-10">
+        <!-- Logo + brand -->
+        <div class="space-y-3">
+          <div class="flex items-center gap-4">
+            <div
+              class="w-14 h-14 rounded-2xl flex items-center justify-center shadow-xl"
+              style="background: linear-gradient(135deg, #6366f1, #8b5cf6)"
+            >
+              <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M15 10l4.553-2.069A1 1 0 0121 8.882v6.236a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"
+                />
+              </svg>
+            </div>
+            <div>
+              <h1 class="text-3xl font-bold text-white tracking-tight">ToonFlow</h1>
+              <p class="text-indigo-300 text-sm mt-0.5">{{ $t("login.slogan") }}</p>
+            </div>
           </div>
         </div>
 
+        <!-- Divider -->
+        <div class="h-px" style="background: linear-gradient(90deg, transparent, rgba(99,102,241,0.4), transparent)" />
+
         <!-- Features -->
-        <div class="space-y-4 text-left">
-          <p class="text-slate-300 text-lg font-medium">{{ $t("login.features") }}</p>
+        <div class="space-y-4">
+          <p class="text-xs font-semibold uppercase tracking-widest text-indigo-400">
+            {{ $t("login.features") }}
+          </p>
           <ul class="space-y-3">
-            <li class="flex items-center gap-3 text-slate-200">
-              <div class="w-2 h-2 bg-blue-400 rounded-full"></div>
-              <span>{{ $t("login.feature1") }}</span>
-            </li>
-            <li class="flex items-center gap-3 text-slate-200">
-              <div class="w-2 h-2 bg-blue-400 rounded-full"></div>
-              <span>{{ $t("login.feature2") }}</span>
-            </li>
-            <li class="flex items-center gap-3 text-slate-200">
-              <div class="w-2 h-2 bg-blue-400 rounded-full"></div>
-              <span>{{ $t("login.feature3") }}</span>
+            <li
+              v-for="(feat, i) in features"
+              :key="i"
+              class="flex items-start gap-3"
+            >
+              <div class="mt-0.5 w-5 h-5 rounded-md flex items-center justify-center shrink-0"
+                style="background: rgba(99,102,241,0.2)"
+              >
+                <svg class="w-3 h-3 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <span class="text-slate-200 text-sm leading-relaxed">{{ feat }}</span>
             </li>
           </ul>
+        </div>
+
+        <!-- Decorative bottom tag -->
+        <div class="flex items-center gap-2 pt-4">
+          <div class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+          <span class="text-xs text-slate-500">AI-powered · Automated · Professional</span>
         </div>
       </div>
     </div>
 
     <!-- Right form panel -->
-    <div class="flex-1 flex flex-col items-center justify-center p-8 bg-gradient-to-br from-white to-slate-50 dark:from-slate-950 dark:to-slate-900">
-      <div class="w-full max-w-md">
-        <!-- Mobile logo (visible on mobile) -->
-        <div class="flex lg:hidden items-center justify-center gap-3 mb-8">
-          <div class="w-16 h-16 bg-gradient-to-br from-blue-600 to-blue-400 rounded-lg flex items-center justify-center">
-            <div class="w-10 h-10 bg-white rounded-md"></div>
+    <div class="flex-1 flex flex-col items-center justify-center p-8 bg-white">
+      <div class="w-full max-w-[380px] space-y-8">
+
+        <!-- Mobile logo -->
+        <div class="flex lg:hidden items-center gap-3">
+          <div
+            class="w-10 h-10 rounded-xl flex items-center justify-center"
+            style="background: linear-gradient(135deg, #6366f1, #8b5cf6)"
+          >
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M15 10l4.553-2.069A1 1 0 0121 8.882v6.236a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"
+              />
+            </svg>
           </div>
-          <h1 class="text-2xl font-bold">ToonFlow</h1>
+          <span class="text-xl font-bold text-slate-900">ToonFlow</span>
         </div>
 
-        <!-- Card -->
-        <Card class="dark:bg-slate-900 dark:border-slate-800">
-          <CardHeader>
-            <CardTitle class="text-center text-2xl">{{ $t("login.login") }}</CardTitle>
-            <CardDescription class="text-center">
-              {{ $t("login.enterCredentials") }}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form @submit.prevent="handleLogin" class="space-y-4">
-              <div class="space-y-2">
-                <Label :for="'username'">{{ $t("login.username") }}</Label>
-                <Input
-                  id="username"
-                  v-model="state.user.username"
-                  :placeholder="$t('login.usernamePlaceholder')"
-                  autocomplete="username"
-                  class="dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                />
+        <!-- Header text -->
+        <div class="space-y-1">
+          <h2 class="text-2xl font-bold text-slate-900 tracking-tight">{{ $t("login.login") }}</h2>
+          <p class="text-sm text-slate-500">{{ $t("login.enterCredentials") }}</p>
+        </div>
+
+        <!-- Form -->
+        <form @submit.prevent="handleLogin" class="space-y-5">
+          <!-- Username -->
+          <div class="space-y-1.5">
+            <label class="text-sm font-medium text-slate-700" for="username">
+              {{ $t("login.username") }}
+            </label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
+                </svg>
               </div>
-
-              <div class="space-y-2">
-                <Label :for="'password'">{{ $t("login.password") }}</Label>
-                <Input
-                  id="password"
-                  v-model="state.user.password"
-                  type="password"
-                  :placeholder="$t('login.passwordPlaceholder')"
-                  autocomplete="current-password"
-                  class="dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                />
-              </div>
-
-              <Button
-                type="submit"
-                class="w-full mt-6 h-10"
-                :disabled="state.loginLoading"
-              >
-                <template v-if="state.loginLoading">
-                  <span class="flex items-center gap-2">
-                    <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    {{ $t("login.loggingIn") }}
-                  </span>
-                </template>
-                <template v-else>
-                  {{ $t("login.login") }}
-                </template>
-              </Button>
-            </form>
-
-            <p class="text-xs text-muted-foreground text-center mt-4 opacity-60">
-              {{ $t("login.tips") }}
-            </p>
-          </CardContent>
-        </Card>
-
-        <!-- Settings section -->
-        <div class="mt-8 pt-8 border-t border-slate-200 dark:border-slate-800">
-          <details class="cursor-pointer group">
-            <summary class="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200">
-              <svg class="w-4 h-4 transform group-open:rotate-90 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-              </svg>
-              {{ $t("login.settings") }}
-            </summary>
-            <div class="mt-4 space-y-3">
-              <div>
-                <Label :for="'baseUrl'">{{ $t("login.requestAddress") }}</Label>
-                <Input
-                  id="baseUrl"
-                  v-model="tempBaseUrl"
-                  type="text"
-                  placeholder="http://localhost:10588"
-                  class="mt-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                />
-              </div>
-              <Button
-                @click="handleSaveSetting"
-                variant="outline"
-                size="sm"
-                class="w-full dark:border-slate-700 dark:hover:bg-slate-800"
-              >
-                {{ $t("login.save") }}
-              </Button>
+              <input
+                id="username"
+                v-model="state.user.username"
+                type="text"
+                :placeholder="$t('login.usernamePlaceholder')"
+                autocomplete="username"
+                class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 text-sm text-slate-900 placeholder-slate-400 outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 bg-slate-50/50"
+              />
             </div>
-          </details>
+          </div>
+
+          <!-- Password -->
+          <div class="space-y-1.5">
+            <label class="text-sm font-medium text-slate-700" for="password">
+              {{ $t("login.password") }}
+            </label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
+                </svg>
+              </div>
+              <input
+                id="password"
+                v-model="state.user.password"
+                :type="showPassword ? 'text' : 'password'"
+                :placeholder="$t('login.passwordPlaceholder')"
+                autocomplete="current-password"
+                class="w-full pl-10 pr-10 py-2.5 rounded-lg border border-slate-200 text-sm text-slate-900 placeholder-slate-400 outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 bg-slate-50/50"
+              />
+              <button
+                type="button"
+                class="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600"
+                @click="showPassword = !showPassword"
+              >
+                <svg v-if="!showPassword" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                  />
+                </svg>
+                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Submit button -->
+          <button
+            type="submit"
+            :disabled="state.loginLoading"
+            class="w-full py-2.5 rounded-lg text-sm font-semibold text-white transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            style="background: linear-gradient(135deg, #6366f1, #8b5cf6)"
+            :style="state.loginLoading ? {} : {}"
+          >
+            <span v-if="state.loginLoading" class="flex items-center justify-center gap-2">
+              <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              {{ $t("login.loggingIn") }}
+            </span>
+            <span v-else>{{ $t("login.login") }}</span>
+          </button>
+        </form>
+
+        <!-- Server settings (collapsible, subtle) -->
+        <div class="border-t border-slate-100 pt-5">
+          <button
+            type="button"
+            class="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 transition-colors"
+            @click="showServerSettings = !showServerSettings"
+          >
+            <svg
+              class="w-3.5 h-3.5 transition-transform"
+              :class="showServerSettings ? 'rotate-90' : ''"
+              fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+            {{ $t("login.settings") }}
+          </button>
+
+          <div v-if="showServerSettings" class="mt-3 space-y-2">
+            <div class="relative">
+              <input
+                v-model="tempBaseUrl"
+                type="text"
+                placeholder="http://localhost:10588"
+                class="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs text-slate-700 placeholder-slate-400 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 bg-slate-50"
+              />
+            </div>
+            <button
+              type="button"
+              @click="handleSaveSetting"
+              class="w-full py-2 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              {{ $t("login.save") }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Language and settings buttons (floating) -->
-  <div class="fixed bottom-8 right-8 flex flex-col gap-3 z-50">
-    <!-- Language dropdown -->
-    <div class="relative group">
+  <!-- Floating controls: language + (hidden settings already in form) -->
+  <div class="fixed bottom-6 right-6 flex flex-col gap-2 z-50">
+    <div class="relative">
       <button
-        class="w-12 h-12 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-lg"
+        class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-colors shadow-md text-slate-500 hover:text-slate-700"
         @click="showLangMenu = !showLangMenu"
+        :title="'Language'"
       >
-        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"
+          />
         </svg>
       </button>
       <div
         v-if="showLangMenu"
-        class="absolute bottom-full right-0 mb-2 w-40 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 overflow-hidden"
+        class="absolute bottom-full right-0 mb-2 w-36 bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden"
       >
         <button
           v-for="lang in languageList"
           :key="lang.value"
           @click="handleChangeLang({ value: lang.value }); showLangMenu = false"
-          class="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-sm"
+          class="w-full text-left px-3 py-2 hover:bg-slate-50 transition-colors text-xs text-slate-700"
         >
           {{ lang.label }}
         </button>
       </div>
     </div>
-
-    <!-- Settings button -->
-    <button
-      @click="showSettingModal = true"
-      class="w-12 h-12 rounded-lg bg-primary text-white flex items-center justify-center hover:bg-primary/90 transition-colors shadow-lg"
-    >
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-      </svg>
-    </button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from "vue";
+import { ref, reactive, computed } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import axios from "@/utils/axios";
 import settingStore from "@/stores/setting";
 import { storeToRefs } from "pinia";
 import { languageList, cachedLocale } from "@/locales";
-import Card from "@/components/ui/Card.vue";
-import CardHeader from "@/components/ui/CardHeader.vue";
-import CardTitle from "@/components/ui/CardTitle.vue";
-import CardDescription from "@/components/ui/CardDescription.vue";
-import CardContent from "@/components/ui/CardContent.vue";
-import Button from "@/components/ui/Button.vue";
-import Input from "@/components/ui/Input.vue";
-import Label from "@/components/ui/Label.vue";
-import { Sun, Moon } from "lucide-vue-next";
 
 const Router = useRouter();
-
 const { locale, t: $t } = useI18n();
 
 const store = settingStore();
 const { baseUrl, isElectron } = storeToRefs(store);
 
-const showSettingModal = ref(false);
 const showLangMenu = ref(false);
+const showServerSettings = ref(false);
+const showPassword = ref(false);
 const tempBaseUrl = ref(baseUrl.value);
 
-// 保存设置
+const features = computed(() => [
+  $t("login.feature1"),
+  $t("login.feature2"),
+  $t("login.feature3"),
+]);
+
 const handleSaveSetting = () => {
   baseUrl.value = tempBaseUrl.value;
-  showSettingModal.value = false;
+  showServerSettings.value = false;
   window.$message.success($t("login.settingsSaved"));
 };
 
@@ -222,15 +295,10 @@ const handleChangeLang = (data: { value: string }) => {
 };
 
 const state = ref({
-  show: true,
   loginLoading: false,
   user: {
     username: "",
     password: "",
-  },
-  rules: {
-    username: [{ required: true, message: $t("login.usernameRequired") }],
-    password: [{ required: true, message: $t("login.passwordRequired") }],
   },
 });
 
@@ -256,30 +324,3 @@ const handleLogin = () => {
     });
 };
 </script>
-
-<style scoped>
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.3);
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-</style>
