@@ -424,6 +424,8 @@
       "title": "Dự án của tôi",
       "subtitle": "Quản lý tất cả các dự án phim ngắn của bạn",
       "newProject": "Dự án mới",
+      "noProjects": "Chưa có dự án nào",
+      "noProjectsHint": "Tạo dự án đầu tiên để bắt đầu",
       "dialog": {
         "editTitle": "Chỉnh sửa dự án",
         "addTitle": "Dự án mới",
@@ -1320,7 +1322,10 @@
         "startTime": "Thời gian",
         "reason": "Lý do thất bại"
       },
-      "project": "Tên dự án:"
+      "project": "Tên dự án:",
+      "noTasks": "Không có tác vụ nào",
+      "total": "Tổng {total} tác vụ",
+      "page": "trang"
     },
     "noVideo": "Chưa có video",
     "prompt": "Lời nhắc video",
