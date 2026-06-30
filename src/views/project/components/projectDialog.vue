@@ -1,140 +1,214 @@
 <template>
-  <div class="addProject">
-    <t-dialog
-      placement="center"
-      v-model:visible="addProjectShow"
-      :header="isEdit ? $t('workbench.project.dialog.editTitle') : $t('workbench.project.dialog.addTitle')"
-      width="60%"
-      @confirm="handleOk"
-      @close-btn-click="handleCancel"
-      @cancel="handleCancel"
-      :confirm-btn="isEdit ? $t('workbench.project.dialog.save') : $t('workbench.project.dialog.ok')"
-      :cancel-btn="$t('workbench.project.dialog.cancel')">
-      <div class="formColumns">
-        <div class="formLeft">
-          <t-form :data="formState" label-align="top">
-            <t-form-item :label="$t('workbench.project.dialog.projectType')">
-              <t-select v-model="formState.projectType" :placeholder="$t('workbench.project.dialog.selectType')">
-                <t-option key="基于小说原文" :label="$t('workbench.project.dialog.basedOnNovel')" value="novel" />
-                <t-option key="基于剧本" :label="$t('workbench.project.dialog.basedOnScript')" value="script" />
-              </t-select>
-            </t-form-item>
-            <t-form-item :label="$t('workbench.project.dialog.projectName')">
-              <t-input v-model="formState.name" :placeholder="$t('workbench.project.dialog.projectNamePh')" />
-            </t-form-item>
-            <t-form-item :label="$t('workbench.project.dialog.novelType')">
-              <t-input v-model="formState.type" :placeholder="$t('workbench.project.dialog.novelTypePh')" />
-            </t-form-item>
-            <t-form-item :label="$t('workbench.project.dialog.modelData')">
-              <div class="ac" style="gap: 5px; width: 100%">
-                <modelSelect v-model="formState.imageModel" type="image" />
-                <t-select v-model="formState.imageQuality" class="paramSelect ml-5" :placeholder="$t('workbench.production.editImage.quality')">
-                  <t-option value="1K" label="1K" />
-                  <t-option value="2K" label="2K" />
-                  <t-option value="4K" label="4K" />
-                </t-select>
+  <div>
+    <!-- Main dialog (shadcn) -->\
+    <Dialog v-model:open="addProjectShow">
+      <DialogContent class="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {{ isEdit ? $t("workbench.project.dialog.editTitle") : $t("workbench.project.dialog.addTitle") }}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div class="formColumns gap-6">
+          <!-- Left form section -->
+          <div class="formLeft flex-1">
+            <div class="space-y-4">
+              <!-- Project Type -->
+              <div class="space-y-2">
+                <label class="text-sm font-medium">{{ $t("workbench.project.dialog.projectType") }}</label>
+                <select
+                  v-model="formState.projectType"
+                  class="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                >
+                  <option value="">{{ $t("workbench.project.dialog.selectType") }}</option>
+                  <option value="novel">{{ $t("workbench.project.dialog.basedOnNovel") }}</option>
+                  <option value="script">{{ $t("workbench.project.dialog.basedOnScript") }}</option>
+                </select>
               </div>
-            </t-form-item>
-            <t-form-item :label="$t('workbench.project.dialog.videoModelData')">
-              <div class="ac" style="gap: 5px; width: 100%">
-                <modelSelect v-model="formState.videoModel" type="video" @change="changeFn" :changeConfig="true" />
-                <t-select v-model="formState.mode" class="paramSelect ml-5" :placeholder="$t('workbench.production.editImage.mode')">
-                  <t-option v-for="value in mode" :key="value.value" :value="value.value" :label="value.label" />
-                </t-select>
+
+              <!-- Project Name -->
+              <div class="space-y-2">
+                <label class="text-sm font-medium">{{ $t("workbench.project.dialog.projectName") }}</label>
+                <Input
+                  v-model="formState.name"
+                  :placeholder="$t('workbench.project.dialog.projectNamePh')"
+                  class="text-sm"
+                />
               </div>
-            </t-form-item>
-            <t-form-item :label="$t('workbench.project.dialog.videoRatio')">
-              <t-select v-model="formState.videoRatio" :options="RATIO_OPTIONS" />
-            </t-form-item>
-            <t-form-item :label="$t('workbench.project.dialog.novelIntro')">
-              <t-textarea
-                v-model="formState.intro"
-                :autosize="{ minRows: 3, maxRows: 6 }"
-                :placeholder="$t('workbench.project.dialog.novelIntroPh')" />
-            </t-form-item>
-          </t-form>
-        </div>
-        <div class="formRight">
-          <t-form label-align="top">
-            <t-form-item>
-              <div class="artStylePicker">
-                <div class="artStyleHeader">
-                  <span>{{ $t("workbench.project.dialog.visualManual") }}</span>
-                  <t-button size="small" variant="outline" @click="openVisualManualDialog()">
-                    <template #icon><i-plus size="14" /></template>
-                    {{ $t("workbench.project.dialog.newVisualManual") }}
-                  </t-button>
+
+              <!-- Novel Type -->
+              <div class="space-y-2">
+                <label class="text-sm font-medium">{{ $t("workbench.project.dialog.novelType") }}</label>
+                <Input
+                  v-model="formState.type"
+                  :placeholder="$t('workbench.project.dialog.novelTypePh')"
+                  class="text-sm"
+                />
+              </div>
+
+              <!-- Image Model + Quality -->
+              <div class="space-y-2">
+                <label class="text-sm font-medium">{{ $t("workbench.project.dialog.modelData") }}</label>
+                <div class="flex gap-2">
+                  <div class="flex-1">
+                    <modelSelect v-model="formState.imageModel" type="image" />
+                  </div>
+                  <select
+                    v-model="formState.imageQuality"
+                    class="w-24 px-3 py-2 rounded-lg border border-input bg-background text-sm outline-none focus:border-primary"
+                  >
+                    <option value="">Quality</option>
+                    <option value="1K">1K</option>
+                    <option value="2K">2K</option>
+                    <option value="4K">4K</option>
+                  </select>
                 </div>
-                <div class="artStyleContent">
-                  <t-loading :loading="visualManualLoading" :text="$t('workbench.project.dialog.loading')">
-                    <div class="gridContainer">
+              </div>
+
+              <!-- Video Model + Mode -->
+              <div class="space-y-2">
+                <label class="text-sm font-medium">{{ $t("workbench.project.dialog.videoModelData") }}</label>
+                <div class="flex gap-2">
+                  <div class="flex-1">
+                    <modelSelect v-model="formState.videoModel" type="video" @change="changeFn" :changeConfig="true" />
+                  </div>
+                  <select
+                    v-model="formState.mode"
+                    class="w-32 px-3 py-2 rounded-lg border border-input bg-background text-sm outline-none focus:border-primary"
+                  >
+                    <option value="">Mode</option>
+                    <option v-for="m in mode" :key="m.value" :value="m.value">
+                      {{ m.label }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Video Ratio -->
+              <div class="space-y-2">
+                <label class="text-sm font-medium">{{ $t("workbench.project.dialog.videoRatio") }}</label>
+                <select
+                  v-model="formState.videoRatio"
+                  class="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm outline-none focus:border-primary"
+                >
+                  <option value="">Select ratio</option>
+                  <option value="16:9">16:9</option>
+                  <option value="9:16">9:16</option>
+                </select>
+              </div>
+
+              <!-- Intro/Description -->
+              <div class="space-y-2">
+                <label class="text-sm font-medium">{{ $t("workbench.project.dialog.novelIntro") }}</label>
+                <textarea
+                  v-model="formState.intro"
+                  rows="4"
+                  :placeholder="$t('workbench.project.dialog.novelIntroPh')"
+                  class="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 resize-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Right section: Art style + Director manual (keep TDesign for now due to complexity) -->
+          <div class="formRight flex-1">
+            <t-form label-align="top">
+              <t-form-item>
+                <div class="artStylePicker">
+                  <div class="artStyleHeader">
+                    <span>{{ $t("workbench.project.dialog.visualManual") }}</span>
+                    <Button size="sm" variant="outline" @click="openVisualManualDialog()">
+                      <Plus :size="14" class="mr-1" />
+                      {{ $t("workbench.project.dialog.newVisualManual") }}
+                    </Button>
+                  </div>
+                  <div class="artStyleContent">
+                    <div v-if="visualManualLoading" class="flex items-center justify-center h-full">
+                      <div class="text-sm text-muted-foreground">{{ $t("workbench.project.dialog.loading") }}</div>
+                    </div>
+                    <div v-else class="gridContainer">
                       <div
                         v-for="(item, index) in visualManualOptions"
                         :key="index"
                         class="gridItem"
                         :class="{ active: formState.artStyle === item.stylePath }"
-                        @click="formState.artStyle = item.stylePath">
+                        @click="formState.artStyle = item.stylePath"
+                      >
                         <div class="imageWrapper">
                           <img :src="item.images && item.images[0]" :alt="item.name" class="artImage" loading="lazy" />
                           <div class="text">{{ item.name }}</div>
                         </div>
-                        <t-button class="editBtn" shape="square" @click.stop="openVisualManualDialog(item)">
-                          <i-edit theme="outline" size="14" />
-                        </t-button>
-                        <t-button class="delBtn" shape="square" @click.stop="deleteVisualManual(item)">
-                          <i-delete theme="outline" size="14" />
-                        </t-button>
-                        <t-button class="preview" shape="square" @click.stop="handlePreview(item.images && item.images[0])">
-                          <i-preview-open theme="outline" size="14" />
-                        </t-button>
+                        <Button class="editBtn" size="sm" variant="ghost" @click.stop="openVisualManualDialog(item)">
+                          <Pencil :size="14" />
+                        </Button>
+                        <Button class="delBtn" size="sm" variant="ghost" @click.stop="deleteVisualManual(item)">
+                          <Trash2 :size="14" />
+                        </Button>
+                        <Button class="preview" size="sm" variant="ghost" @click.stop="handlePreview(item.images && item.images[0])">
+                          <Eye :size="14" />
+                        </Button>
                       </div>
                     </div>
-                  </t-loading>
+                  </div>
                 </div>
-              </div>
-            </t-form-item>
-            <t-form-item>
-              <div class="directorManual">
-                <div class="directorManualHeader">
-                  <span>{{ $t("workbench.project.dialog.directorManual") }}</span>
-                  <t-button size="small" variant="outline" @click="openDirectorManualDialog()">
-                    <template #icon><i-plus size="14" /></template>
-                    {{ $t("workbench.project.dialog.addDirectorManual") }}
-                  </t-button>
-                </div>
-                <div class="artStyleContent">
-                  <t-loading :loading="directorManualLoading" :text="$t('workbench.project.dialog.loading')">
-                    <div class="gridContainer">
+              </t-form-item>
+
+              <t-form-item>
+                <div class="directorManual">
+                  <div class="directorManualHeader">
+                    <span>{{ $t("workbench.project.dialog.directorManual") }}</span>
+                    <Button size="sm" variant="outline" @click="openDirectorManualDialog()">
+                      <Plus :size="14" class="mr-1" />
+                      {{ $t("workbench.project.dialog.addDirectorManual") }}
+                    </Button>
+                  </div>
+                  <div class="artStyleContent">
+                    <div v-if="directorManualLoading" class="flex items-center justify-center h-full">
+                      <div class="text-sm text-muted-foreground">{{ $t("workbench.project.dialog.loading") }}</div>
+                    </div>
+                    <div v-else class="gridContainer">
                       <div
                         v-for="(item, index) in directorManualOptions"
                         :key="index"
                         class="gridItem"
                         :class="{ active: formState.directorManual === item.directorManual }"
-                        @click="formState.directorManual = item.directorManual">
+                        @click="formState.directorManual = item.directorManual"
+                      >
                         <div class="imageWrapper">
                           <img :src="item.images && item.images[0]" :alt="item.name" class="artImage" loading="lazy" />
                           <div class="text">{{ item.name }}</div>
                         </div>
-                        <t-button class="editBtn" shape="square" @click.stop="openDirectorManualDialog(item)">
-                          <i-edit theme="outline" size="14" />
-                        </t-button>
-                        <t-button class="delBtn" shape="square" @click.stop="deleteDirectorManual(item)">
-                          <i-delete theme="outline" size="14" />
-                        </t-button>
-                        <t-button class="preview" shape="square" @click.stop="handlePreview(item.images && item.images[0])">
-                          <i-preview-open theme="outline" size="14" />
-                        </t-button>
+                        <Button class="editBtn" size="sm" variant="ghost" @click.stop="openDirectorManualDialog(item)">
+                          <Pencil :size="14" />
+                        </Button>
+                        <Button class="delBtn" size="sm" variant="ghost" @click.stop="deleteDirectorManual(item)">
+                          <Trash2 :size="14" />
+                        </Button>
+                        <Button class="preview" size="sm" variant="ghost" @click.stop="handlePreview(item.images && item.images[0])">
+                          <Eye :size="14" />
+                        </Button>
                       </div>
                     </div>
-                  </t-loading>
+                  </div>
                 </div>
-              </div>
-            </t-form-item>
-          </t-form>
+              </t-form-item>
+            </t-form>
+          </div>
         </div>
-      </div>
-    </t-dialog>
-    <!-- 新建/编辑视觉手册弹窗 -->
+
+        <!-- Dialog footer buttons -->
+        <DialogFooter class="mt-6">
+          <Button variant="outline" @click="handleCancel">
+            {{ $t("workbench.project.dialog.cancel") }}
+          </Button>
+          <Button @click="handleOk">
+            {{ isEdit ? $t("workbench.project.dialog.save") : $t("workbench.project.dialog.ok") }}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Visual manual dialog (keep TDesign for now) -->
     <t-dialog
       class="artStyleDialog"
       v-model:visible="visualManualDialogVisible"
@@ -142,10 +216,11 @@
       width="90vw"
       placement="center"
       @confirm="handleVisualManualSubmit"
-      @close-btn-click="resetDirectorManualDialog"
-      @cancel="resetDirectorManualDialog"
+      @close-btn-click="resetVisualManualDialog"
+      @cancel="resetVisualManualDialog"
       :confirm-btn="$t('workbench.project.dialog.ok')"
-      :cancel-btn="$t('workbench.project.dialog.cancel')">
+      :cancel-btn="$t('workbench.project.dialog.cancel')"
+    >
       <t-loading :loading="loading">
         <t-form label-align="top">
           <t-form-item>
@@ -174,7 +249,8 @@
                       accept="image/*"
                       multiple
                       style="display: none"
-                      @change="handleVisualManualCoverFileChange" />
+                      @change="handleVisualManualCoverFileChange"
+                    />
                     <i-plus size="24" />
                     <span>{{ $t("workbench.project.dialog.uploadCover") }}</span>
                   </div>
@@ -195,7 +271,8 @@
                         :footers="[]"
                         :placeholder="$t('workbench.project.dialog.promptPlaceholder')"
                         style="height: 30vh; margin-top: 5px"
-                        @onUploadImg="() => {}" />
+                        @onUploadImg="() => {}"
+                      />
                     </t-tab-panel>
                   </t-tabs>
                 </div>
@@ -205,7 +282,8 @@
         </t-form>
       </t-loading>
     </t-dialog>
-    <!-- 新建/编辑导演手册弹窗 -->
+
+    <!-- Director manual dialog (keep TDesign for now) -->
     <t-dialog
       class="artStyleDialog"
       v-model:visible="directorDialogVisible"
@@ -213,10 +291,11 @@
       width="90vw"
       placement="center"
       @confirm="handleDirectorManualSubmit"
-      @close-btn-click="resetVisualManualDialog"
-      @cancel="resetVisualManualDialog"
+      @close-btn-click="resetDirectorManualDialog"
+      @cancel="resetDirectorManualDialog"
       :confirm-btn="$t('workbench.project.dialog.ok')"
-      :cancel-btn="$t('workbench.project.dialog.cancel')">
+      :cancel-btn="$t('workbench.project.dialog.cancel')"
+    >
       <t-loading :loading="loading">
         <t-form label-align="top">
           <t-form-item>
@@ -245,7 +324,8 @@
                       accept="image/*"
                       multiple
                       style="display: none"
-                      @change="handleDirectorManualCoverFileChange" />
+                      @change="handleDirectorManualCoverFileChange"
+                    />
                     <i-plus size="24" />
                     <span>{{ $t("workbench.project.dialog.uploadCover") }}</span>
                   </div>
@@ -266,7 +346,8 @@
                         :footers="[]"
                         :placeholder="$t('workbench.project.dialog.promptPlaceholder')"
                         style="height: 30vh; margin-top: 5px"
-                        @onUploadImg="() => {}" />
+                        @onUploadImg="() => {}"
+                      />
                     </t-tab-panel>
                   </t-tabs>
                 </div>
@@ -276,6 +357,8 @@
         </t-form>
       </t-loading>
     </t-dialog>
+
+    <!-- Image preview -->
     <t-image-viewer v-model="visible" :images="[trigger]" :closeOnOverlay="true" />
   </div>
 </template>
@@ -295,6 +378,16 @@ import type { ToolbarNames } from "md-editor-v3";
 import modelSelect from "@/components/modelSelect.vue";
 import type { TabValue } from "tdesign-vue-next";
 import { DialogPlugin } from "tdesign-vue-next";
+
+// shadcn imports
+import Dialog from "@/components/ui/Dialog.vue";
+import DialogContent from "@/components/ui/DialogContent.vue";
+import DialogHeader from "@/components/ui/DialogHeader.vue";
+import DialogTitle from "@/components/ui/DialogTitle.vue";
+import DialogFooter from "@/components/ui/DialogFooter.vue";
+import Button from "@/components/ui/Button.vue";
+import Input from "@/components/ui/Input.vue";
+import { Plus, Pencil, Trash2, Eye } from "lucide-vue-next";
 
 const addProjectShow = defineModel<boolean>();
 const props = defineProps<{

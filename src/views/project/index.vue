@@ -20,7 +20,7 @@
       <Card
         v-for="project in allProject"
         :key="project.id"
-        class="group relative cursor-pointer hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 dark:bg-card dark:border-border overflow-hidden"
+        class="group relative cursor-pointer hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
       >
         <!-- Clickable body area -->
         <CardHeader class="pb-3" @click.stop="openProject(project.id)">
