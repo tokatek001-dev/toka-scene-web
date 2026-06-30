@@ -1,79 +1,152 @@
 <template>
-  <div class="main" :style="{ height: isElectron ? 'calc(100vh - 32px)' : '100vh' }">
-    <div class="menu fc jb">
-      <div class="logoBox c">
-        <div class="logo"></div>
-      </div>
-      <div class="itemBox fc ac">
-        <t-tooltip
-          :content="menu.labelKey ? $t(menu.labelKey) : ''"
-          placement="right"
-          destroyOnClose
-          :showArrow="false"
-          v-for="(menu, index) in menuList"
-          :key="index">
-          <div class="item fc c" v-if="menu.type === 'btn'" :class="{ active: activeMenu == menu.path }" @click="handleClick(menu)">
-            <component :is="menu.icon" class="icon" />
+  <div
+    class="flex bg-background"
+    :style="{ height: isElectron ? 'calc(100vh - 32px)' : '100vh' }"
+  >
+    <!-- Narrow icon sidebar -->
+    <TooltipProvider :delay-duration="200">
+      <aside class="w-14 flex flex-col items-center py-4 gap-1 bg-card border-r border-border shrink-0">
+        <!-- Logo -->
+        <div class="mb-4 flex items-center justify-center w-10 h-10">
+          <div class="w-7 h-7 bg-primary rounded-lg flex items-center justify-center">
+            <div class="w-4 h-4 bg-primary-foreground rounded-sm opacity-80"></div>
           </div>
-          <div class="divider" v-if="menu.type === 'divider'"></div>
-        </t-tooltip>
-      </div>
-      <div class="footItem fc ac">
-        <t-tooltip :content="$t('workbench.menu.feedbackQuestions')" placement="right" destroyOnClose :showArrow="false">
-          <div class="item c" @click="openFeedback">
-            <i-bill class="icon" />
-          </div>
-        </t-tooltip>
-        <t-tooltip :content="$t('workbench.menu.settings')" placement="right" destroyOnClose :showArrow="false">
-          <div class="item c" @click="showSetting = true">
-            <t-badge :count="needUpdate ? 1 : 0" dot>
-              <i-setting-one class="icon" />
-            </t-badge>
-          </div>
-        </t-tooltip>
-        <t-tooltip :content="$t('workbench.menu.jumpGithub')" placement="right" destroyOnClose :showArrow="false">
-          <div class="item c" @click="jumpGithub">
-            <i-github-one class="icon" />
-          </div>
-        </t-tooltip>
-      </div>
-    </div>
-    <div class="view">
-      <div class="topMenu f ac jb" v-if="project?.id">
-        <div class="title">
-          <h2>{{ project?.name || $t("workbench.selectProject") }}</h2>
         </div>
-        <div class="rightBtnList f ac">
-          <t-tooltip
-            :content="menu.labelKey ? $t(menu.labelKey) : ''"
-            placement="bottom"
-            destroyOnClose
-            :showArrow="false"
-            v-for="(menu, index) in rightBtnList"
-            :key="index">
-            <div
-              class="item fc c"
-              v-if="menu.type === 'btn' && (project.projectType === 'novel' || !menu.nodelOnly)"
-              :class="{ active: activeMenu == menu.path }"
-              @click="handleClick(menu)">
-              <component :is="menu.icon" class="icon" />
-            </div>
-            <div class="divider" v-if="menu.type === 'divider'"></div>
-          </t-tooltip>
+
+        <!-- Primary nav items -->
+        <nav class="flex flex-col items-center gap-1 flex-1">
+          <!-- Project / Task (always visible) -->
+          <template v-for="(menu, index) in menuList" :key="index">
+            <Tooltip v-if="menu.type === 'btn'">
+              <TooltipTrigger>
+                <button
+                  class="w-10 h-10 flex items-center justify-center rounded-lg transition-colors hover:bg-accent hover:text-accent-foreground"
+                  :class="{ 'bg-accent text-accent-foreground': activeMenu === menu.path }"
+                  @click="handleClick(menu)"
+                >
+                  <component :is="menu.icon" :size="20" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                {{ menu.labelKey ? $t(menu.labelKey) : '' }}
+              </TooltipContent>
+            </Tooltip>
+            <div v-else-if="menu.type === 'divider'" class="w-8 h-px bg-border my-1" />
+          </template>
+
+          <!-- Divider before project-specific routes -->
+          <div v-if="project?.id" class="w-8 h-px bg-border my-1" />
+
+          <!-- Project-specific routes (only when project is open) -->
+          <template v-if="project?.id" v-for="(menu, index) in rightBtnList" :key="'right-' + index">
+            <Tooltip v-if="menu.type === 'btn' && (project.projectType === 'novel' || !menu.nodelOnly)">
+              <TooltipTrigger>
+                <button
+                  class="w-10 h-10 flex items-center justify-center rounded-lg transition-colors hover:bg-accent hover:text-accent-foreground"
+                  :class="{ 'bg-accent text-accent-foreground': activeMenu === menu.path }"
+                  @click="handleClick(menu)"
+                >
+                  <component :is="menu.icon" :size="20" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                {{ menu.labelKey ? $t(menu.labelKey) : '' }}
+              </TooltipContent>
+            </Tooltip>
+            <div v-else-if="menu.type === 'divider'" class="w-8 h-px bg-border my-1" />
+          </template>
+        </nav>
+
+        <!-- Footer actions -->
+        <div class="flex flex-col items-center gap-1 mt-auto">
+          <!-- Feedback -->
+          <Tooltip>
+            <TooltipTrigger>
+              <button
+                class="w-10 h-10 flex items-center justify-center rounded-lg transition-colors hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+                @click="openFeedback"
+              >
+                <FileText :size="20" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              {{ $t('workbench.menu.feedbackQuestions') }}
+            </TooltipContent>
+          </Tooltip>
+
+          <!-- Settings with update badge -->
+          <Tooltip>
+            <TooltipTrigger>
+              <button
+                class="w-10 h-10 flex items-center justify-center rounded-lg transition-colors hover:bg-accent hover:text-accent-foreground text-muted-foreground relative"
+                @click="showSetting = true"
+              >
+                <Settings :size="20" />
+                <span v-if="needUpdate" class="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              {{ $t('workbench.menu.settings') }}
+            </TooltipContent>
+          </Tooltip>
+
+          <!-- Theme toggle (Sun / Moon) -->
+          <Tooltip>
+            <TooltipTrigger>
+              <button
+                class="w-10 h-10 flex items-center justify-center rounded-lg transition-colors hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+                @click="handleThemeToggle"
+              >
+                <Sun v-if="isDark" :size="20" />
+                <Moon v-else :size="20" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              {{ isDark ? $t('workbench.menu.lightMode') : $t('workbench.menu.darkMode') }}
+            </TooltipContent>
+          </Tooltip>
+
+          <!-- GitHub -->
+          <Tooltip>
+            <TooltipTrigger>
+              <button
+                class="w-10 h-10 flex items-center justify-center rounded-lg transition-colors hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+                @click="jumpGithub"
+              >
+                <Github :size="20" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              {{ $t('workbench.menu.jumpGithub') }}
+            </TooltipContent>
+          </Tooltip>
         </div>
+      </aside>
+    </TooltipProvider>
+
+    <!-- Main content area -->
+    <div class="flex-1 flex flex-col overflow-hidden bg-background">
+      <!-- Project top bar (only when a project is active) -->
+      <div v-if="project?.id" class="h-12 border-b border-border flex items-center justify-between px-6 shrink-0 bg-card/50 backdrop-blur-sm">
+        <h2 class="font-semibold text-foreground truncate">{{ project?.name || $t("workbench.selectProject") }}</h2>
       </div>
-      <div class="viewBox">
+
+      <!-- Router view -->
+      <div class="flex-1 overflow-auto scrollbar-thin">
         <router-view v-slot="{ Component }">
           <component :is="Component" :key="$route.fullPath" />
         </router-view>
       </div>
     </div>
   </div>
+
   <hello />
   <setting />
 </template>
 
 <script setup lang="ts">
+import { ref, reactive, watch, onMounted, onUnmounted } from "vue";
+import { storeToRefs } from "pinia";
 import axios from "@/utils/axios";
 import setting from "@/components/setting/index.vue";
 import hello from "@/components/hello.vue";
@@ -81,21 +154,57 @@ import projectStore from "@/stores/project";
 const { project } = storeToRefs(projectStore());
 import settingStore from "@/stores/setting";
 import { NotifyPlugin } from "tdesign-vue-next";
+import {
+  FolderOpen,
+  BookOpen,
+  FileText,
+  Bot,
+  Clapperboard,
+  Image,
+  LayoutGrid,
+  ListTodo,
+  Settings,
+  Github,
+  Sun,
+  Moon,
+} from "lucide-vue-next";
+import TooltipProvider from "@/components/ui/TooltipProvider.vue";
+import Tooltip from "@/components/ui/Tooltip.vue";
+import TooltipTrigger from "@/components/ui/TooltipTrigger.vue";
+import TooltipContent from "@/components/ui/TooltipContent.vue";
+import { useTheme, applyThemeMode, toggleThemeWithTransition } from "@/utils/theme";
+
 const { showSetting, isElectron, needUpdate } = storeToRefs(settingStore());
+const { themeSetting } = useTheme();
+
+const isDark = computed(() => {
+  if (themeSetting.value.mode === "auto") {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  }
+  return themeSetting.value.mode === "dark";
+});
+
+function handleThemeToggle(event: MouseEvent) {
+  const newMode = isDark.value ? "light" : "dark";
+  toggleThemeWithTransition(event, () => {
+    themeSetting.value.mode = newMode;
+    applyThemeMode(newMode);
+  });
+}
+
 const menuList = ref([
-  { type: "btn", path: "/project", labelKey: "workbench.menu.myProject", icon: "i-folder-close" },
-  { type: "btn", path: "/task", labelKey: "workbench.menu.taskCenter", icon: "i-view-list" },
-  // { type: "divider" },
+  { type: "btn", path: "/project", labelKey: "workbench.menu.myProject", icon: FolderOpen },
+  { type: "btn", path: "/task", labelKey: "workbench.menu.taskCenter", icon: ListTodo },
 ]);
 
 const rightBtnList = ref([
-  { type: "btn", path: "/novel", labelKey: "workbench.menu.novel", icon: "i-notebook", nodelOnly: true },
-  { type: "btn", path: "/scriptAgent", labelKey: "workbench.menu.scriptAgent", icon: "i-color-filter", nodelOnly: true },
-  { type: "btn", path: "/script", labelKey: "workbench.menu.scriptManage", icon: "i-document-folder" },
-  { type: "btn", path: "/cornerScape", labelKey: "workbench.menu.cornerScape", icon: "i-peoples-two" },
-  { type: "btn", path: "/production", labelKey: "workbench.menu.production", icon: "i-carousel-video" },
+  { type: "btn", path: "/novel", labelKey: "workbench.menu.novel", icon: BookOpen, nodelOnly: true },
+  { type: "btn", path: "/scriptAgent", labelKey: "workbench.menu.scriptAgent", icon: Bot, nodelOnly: true },
+  { type: "btn", path: "/script", labelKey: "workbench.menu.scriptManage", icon: FileText },
+  { type: "btn", path: "/cornerScape", labelKey: "workbench.menu.cornerScape", icon: LayoutGrid },
+  { type: "btn", path: "/production", labelKey: "workbench.menu.production", icon: Clapperboard },
   { type: "divider" },
-  { type: "btn", path: "/assets", labelKey: "workbench.menu.assetCenter", icon: "i-receive" },
+  { type: "btn", path: "/assets", labelKey: "workbench.menu.assetCenter", icon: Image },
 ]);
 
 const router = useRouter();
@@ -197,149 +306,26 @@ onUnmounted(() => {
 });
 </script>
 
-<style lang="scss" scoped>
-.main {
-  width: 100vw;
-  padding: 16px;
-  display: flex;
-
-  .menu {
-    width: 64px;
-    height: 100%;
-    overflow-x: hidden;
-    overflow-y: auto;
-    background-color: var(--page);
-    border-radius: 16px;
-    padding-top: 16px;
-    padding-bottom: 16px;
-    color: var(--td-text-color-primary);
-    .logoBox {
-      width: 100%;
-      height: fit-content;
-      .logo {
-        width: 60%;
-        aspect-ratio: 1/1;
-        background-color: var(--td-text-color-primary);
-        mask: url("@/assets/logo.svg") no-repeat center;
-        mask-size: contain;
-        -webkit-mask: url("@/assets/logo.svg") no-repeat center;
-        -webkit-mask-size: contain;
-      }
-    }
-    .itemBox {
-      flex: 1;
-      margin-top: 16px;
-      margin-bottom: 16px;
-      padding-bottom: 16px;
-      width: 100%;
-      height: 100%;
-    }
-    .footItem {
-      width: 100%;
-      height: fit-content;
-      .item {
-        cursor: pointer;
-        width: 50px;
-        height: 50px;
-        .icon {
-          font-size: 24px;
-        }
-        &:hover {
-          background-color: var(--td-bg-color-container-hover);
-          border-radius: 16px;
-        }
-      }
-      .active {
-        background-color: #000 !important;
-        border-radius: 16px;
-      }
-    }
-  }
-  .menu::-webkit-scrollbar {
-    width: 4px;
-  }
-  .menu::-webkit-scrollbar-thumb {
-    background-color: #d5d5d5;
-    border-radius: 4px;
-    &:hover {
-      background-color: #bbb;
-    }
-  }
-  .menu::-webkit-scrollbar-track {
-    background-color: transparent;
-  }
-  .view {
-    flex: 1;
-    margin-left: 16px;
-    background-color: var(--page);
-    border-radius: 16px;
-    width: 100%;
-    overflow-x: hidden;
-    overflow-y: auto;
-    scrollbar-gutter: stable;
-    padding-left: 32px;
-    padding-right: 32px;
-    .topMenu {
-      height: 50px;
-      .rightBtnList {
-        .item {
-          margin-bottom: 0px !important;
-          margin-top: 0px !important;
-          margin-right: 4px;
-          margin-left: 4px;
-        }
-        .divider {
-          width: 1px;
-          height: 24px;
-          background-color: var(--td-border-level-1-color);
-          margin: 0 4px;
-        }
-      }
-    }
-    .viewBox {
-      width: 100%;
-      height: calc(100% - 6vh);
-    }
-  }
+<style scoped>
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
 }
 
-.item {
-  margin-bottom: 4px;
-  margin-top: 4px;
-  cursor: pointer;
-  width: 50px;
-  height: 50px;
-  .icon {
-    font-size: 24px;
-  }
-  .title {
-    font-size: 10px;
-    white-space: nowrap;
-    color: var(--td-text-color-primary);
-  }
-  &:hover {
-    background-color: var(--td-bg-color-container-hover);
-    border-radius: 16px;
-  }
-}
-.active {
-  background-color: var(--td-brand-color) !important;
-  color: var(--td-font-white-1);
-  border-radius: 16px;
-}
-.divider {
-  width: 50px;
-  height: 1px;
-  background-color: var(--td-border-level-1-color);
-  margin: 8px 0;
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
 }
 
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease;
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
 }
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--border));
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground));
 }
 </style>

@@ -6,8 +6,8 @@ html,
 body,
 #app {
   margin: 0;
-  background-color: var(--bgc);
-  color: var(--td-text-color-primary);
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
 }
 
 img {

@@ -23,7 +23,7 @@ export default defineStore(
       primaryColor: string;
       fontSize: number;
     }>({
-      mode: "auto",
+      mode: "light",
       primaryColor: "#0052D9",
       fontSize: 16,
     });

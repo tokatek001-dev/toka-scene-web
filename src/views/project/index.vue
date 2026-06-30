@@ -1,61 +1,128 @@
 <template>
-  <div class="project">
-    <div class="header">
-      <div class="fc">
-        <span class="title">{{ $t("workbench.project.title") }}</span>
-        <span class="sub">{{ $t("workbench.project.subtitle") }}</span>
+  <div class="flex flex-col h-full px-8 py-8">
+    <!-- Top toolbar -->
+    <div class="flex items-center justify-between mb-8">
+      <div>
+        <h1 class="text-3xl font-bold text-foreground">{{ $t("workbench.project.title") }}</h1>
+        <p class="text-sm text-muted-foreground mt-1">{{ $t("workbench.project.subtitle") }}</p>
       </div>
-      <t-button
-        class="addBtn"
-        @click="
-          editProjectData = null;
-          dialogShow = true;
-        ">
-        <template #icon><i-plus class="addIcon" :size="20" /></template>
+      <Button
+        @click="editProjectData = null; dialogShow = true"
+        class="flex items-center gap-2"
+      >
+        <Plus :size="16" />
         {{ $t("workbench.project.newProject") }}
-      </t-button>
+      </Button>
     </div>
-    <div class="list">
-      <t-card hoverShadow class="card" v-for="project in allProject" :key="project.id" @click="openProject(project.id)">
-        <div class="jb ac">
-          <div class="title">
-            {{ project.name }}
-          </div>
-          <div>
-            <t-tag shape="round">
-              {{ project.projectType == "novel" ? $t(`workbench.project.type.novel`) : $t(`workbench.project.type.script`) }}
-            </t-tag>
-          </div>
-        </div>
-        <t-tag shape="round" v-if="project.artStyle" style="align-self: flex-start">{{ project.artStyle }}</t-tag>
-        <div class="intro">
-          {{ project.intro }}
-        </div>
-        <div class="bottomMenu f ac jb">
-          <div class="time">
-            <span>{{ dayjs(project?.createTime).format("YYYY-MM-DD HH:mm:ss") }}</span>
-          </div>
-          <div class="actionBtns f ac">
-            <div class="editBtn" @click.stop="openEdit(project)">
-              <i-edit :size="18" />
+
+    <!-- Project Grid -->
+    <div v-if="allProject.length > 0" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+      <Card
+        v-for="project in allProject"
+        :key="project.id"
+        class="group relative cursor-pointer hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 dark:bg-card dark:border-border overflow-hidden"
+      >
+        <!-- Clickable body area -->
+        <CardHeader class="pb-3" @click.stop="openProject(project.id)">
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex items-center gap-2 min-w-0">
+              <CardTitle class="text-lg font-bold truncate">
+                {{ project.name }}
+              </CardTitle>
             </div>
-            <div class="removeBtn" @click.stop="delProjcer(project.id)">
-              <i-delete :size="18" />
+            <div class="flex items-center gap-2 shrink-0">
+              <Badge variant="secondary" class="shrink-0">
+                {{ project.projectType == "novel" ? $t(`workbench.project.type.novel`) : $t(`workbench.project.type.script`) }}
+              </Badge>
+
+              <!-- 3-dot dropdown menu -->
+              <div @click.stop>
+                <DropdownMenu>
+                  <DropdownMenuTrigger>
+                    <button class="p-1.5 rounded-md hover:bg-muted transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100">
+                      <MoreHorizontal :size="16" class="text-muted-foreground" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent class="min-w-[120px]" align="end">
+                    <DropdownMenuItem @click="openEdit(project)" class="cursor-pointer flex items-center gap-2">
+                      <Pencil :size="14" />
+                      {{ $t("workbench.project.edit") }}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem @click="delProjcer(project.id)" class="cursor-pointer flex items-center gap-2 text-destructive focus:text-destructive">
+                      <Trash2 :size="14" />
+                      {{ $t("workbench.project.delete") }}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           </div>
-        </div>
-      </t-card>
+          <Badge v-if="project.artStyle" variant="outline" class="self-start mt-1 text-xs">
+            {{ project.artStyle }}
+          </Badge>
+        </CardHeader>
+
+        <CardContent class="pt-0" @click.stop="openProject(project.id)">
+          <p class="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">
+            {{ project.intro || $t("workbench.project.noIntro") }}
+          </p>
+          <p class="text-xs text-muted-foreground/60 mt-3 flex items-center gap-1.5">
+            <CalendarDays :size="12" />
+            {{ dayjs(project?.createTime).format("YYYY-MM-DD HH:mm") }}
+          </p>
+        </CardContent>
+
+        <CardFooter class="pt-0 gap-2 flex-wrap" @click.stop="openProject(project.id)">
+          <div v-if="project.imageModel" class="flex items-center gap-1.5 text-xs px-2.5 py-1 bg-muted rounded-full text-muted-foreground">
+            <Image :size="12" />
+            <span class="truncate max-w-[100px]">{{ project.imageModel }}</span>
+          </div>
+          <div v-if="project.videoModel" class="flex items-center gap-1.5 text-xs px-2.5 py-1 bg-muted rounded-full text-muted-foreground">
+            <Video :size="12" />
+            <span class="truncate max-w-[100px]">{{ project.videoModel }}</span>
+          </div>
+        </CardFooter>
+      </Card>
+    </div>
+
+    <!-- Empty state -->
+    <div v-else class="flex flex-col items-center justify-center flex-1 gap-4 py-24 text-muted-foreground">
+      <div class="w-20 h-20 rounded-full bg-muted flex items-center justify-center">
+        <FolderOpen :size="36" class="text-muted-foreground/50" />
+      </div>
+      <div class="text-center">
+        <p class="text-lg font-medium">{{ $t("workbench.project.noProjects") }}</p>
+        <p class="text-sm opacity-60 mt-1">{{ $t("workbench.project.noProjectsHint") }}</p>
+      </div>
+      <Button @click="editProjectData = null; dialogShow = true" variant="outline" class="mt-2">
+        <Plus :size="16" class="mr-2" />
+        {{ $t("workbench.project.newProject") }}
+      </Button>
     </div>
   </div>
+
   <projectDialog v-model="dialogShow" :projectData="editProjectData" @add="addProjectFn" @edit="editProjectFn" />
 </template>
 
 <script setup lang="ts">
+import { DialogPlugin } from "tdesign-vue-next";
 import projectDialog from "./components/projectDialog.vue";
 import dayjs from "dayjs";
 import axios from "@/utils/axios";
 import projectStore from "@/stores/project";
 import imageListCacheStore from "@/stores/imageListCache";
+import { Plus, MoreHorizontal, Pencil, Trash2, CalendarDays, Image, Video, FolderOpen } from "lucide-vue-next";
+import Card from "@/components/ui/Card.vue";
+import CardHeader from "@/components/ui/CardHeader.vue";
+import CardTitle from "@/components/ui/CardTitle.vue";
+import CardContent from "@/components/ui/CardContent.vue";
+import CardFooter from "@/components/ui/CardFooter.vue";
+import Button from "@/components/ui/Button.vue";
+import Badge from "@/components/ui/Badge.vue";
+import DropdownMenu from "@/components/ui/DropdownMenu.vue";
+import DropdownMenuTrigger from "@/components/ui/DropdownMenuTrigger.vue";
+import DropdownMenuContent from "@/components/ui/DropdownMenuContent.vue";
+import DropdownMenuItem from "@/components/ui/DropdownMenuItem.vue";
 
 const { clearProjectCache } = imageListCacheStore();
 const { allProject, project } = storeToRefs(projectStore());
@@ -213,79 +280,13 @@ function delProjcer(projectId: string | undefined) {
 }
 </script>
 
-<style lang="scss" scoped>
-.project {
-  .header {
-    padding-top: 32px;
-    margin-bottom: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    .title {
-      font-size: 32px;
-      font-weight: 600;
-      color: var(--td-text-color-primary);
-    }
-    .sub {
-      opacity: 0.5;
-      color: var(--td-text-color-secondary);
-    }
-  }
-  .list {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    .card {
-      width: 100%;
-      height: 100%;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      .title {
-        font-size: 20px;
-        font-weight: bold;
-        margin-bottom: 8px;
-      }
-      .intro {
-        height: 100%;
-        margin-top: 5px;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      .bottomMenu {
-        margin-top: 32px;
-        .time {
-          opacity: 0.5;
-        }
-        .actionBtns {
-          gap: 12px;
-        }
-        .editBtn {
-          cursor: pointer;
-          &:hover {
-            color: var(--td-brand-color);
-          }
-        }
-        .removeBtn {
-          cursor: pointer;
-          &:hover {
-            color: red;
-          }
-        }
-      }
-    }
-  }
+<style scoped>
+/* Smooth hover elevation */
+.group:hover {
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.15);
 }
-:deep(.t-col) {
-  height: auto !important;
-}
-:deep(.t-card__body) {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
+
+.dark .group:hover {
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
 }
 </style>
