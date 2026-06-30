@@ -4,7 +4,7 @@
       <div class="model">
         <modelSelect v-model="modelParmas.model" type="video" size="small" />
       </div>
-      <t-select size="small" class="mode" :value="modelParmas.mode" :onChange="handleBeforeChange">
+      <t-select size="small" class="mode" :value="modelParmas.mode" :onChange="(v: unknown) => handleBeforeChange(v as string)">
         <t-option v-for="(item, index) in modeList" :key="index" :value="item.value" :label="item.label"></t-option>
       </t-select>
       <t-button

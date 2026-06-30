@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 // 动态加载 src/assets/providers 下所有图标
 const iconModules = import.meta.glob<string>("@/assets/providers/*.{webp,png}", {
   eager: true,

@@ -71,6 +71,12 @@ export interface FlowData {
   storyboard: Storyboard[];
   workbench: {
     videoList: VideoList[];
+    name: string;
+    duration: string;
+    resolution: string;
+    fps: string;
+    cover?: string;
+    gradient?: string;
   };
 }
 

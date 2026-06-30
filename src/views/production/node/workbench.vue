@@ -40,6 +40,13 @@ interface WorkbenchData {
   fps: string;
   cover?: string;
   gradient?: string;
+  videoList?: Array<{
+    id: number;
+    prompt: string;
+    duration: number;
+    storyboardId: number;
+    trackId: number;
+  }>;
 }
 
 const props = defineProps<{
