@@ -1,379 +1,198 @@
 <template>
   <div class="assets">
     <div class="data">
-      <t-tabs v-model="assetOptions" @change="selectAssetOptions">
-        <t-tab-panel v-for="(item, index) in themeData" :key="index" :value="item.value">
-          <template #label>
+      <Tabs v-model="assetOptions" @update:model-value="selectAssetOptions" class="flex flex-col flex-1 overflow-hidden">
+        <TabsList class="w-full justify-start border-b">
+          <TabsTrigger v-for="(item, index) in themeData" :key="index" :value="item.value">
             <div class="tabLabel">
-              <component :is="item.icon" theme="outline" size="20" />
+              <component :is="item.icon" :size="20" />
               <span>{{ item.name }}</span>
             </div>
-          </template>
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent v-for="(item, index) in themeData" :key="index" :value="item.value" class="flex-1 overflow-hidden"
+          asChild>
 
           <div class="panelContent">
             <div class="toolbar">
-              <t-space>
-                <t-button theme="primary" @click="handleAdd(item.value)">
-                  <template #icon>
-                    <t-icon name="add" />
-                  </template>
+              <div class="flex items-center gap-2">
+                <Button @click="handleAdd(item.value)">
+                  <Plus :size="16" class="mr-1" />
                   {{ $t("workbench.assets.addPrefix") }}{{ item.name }}
-                </t-button>
-                <t-popup placement="bottom">
-                  <t-button theme="primary" v-if="assetOptions != 'clip' && assetOptions != 'audio'">
-                    <template #icon>
-                      <t-icon name="indent-left" />
-                    </template>
-                    {{ $t("workbench.assets.batchGenerate") }}
-                  </t-button>
-                  <template #content>
-                    <div class="data">
-                      <div class="generatePrompt">
-                        <span @click="batchGeneration(1)">{{ $t("workbench.assets.generatePrompt") }}</span>
-                      </div>
-                      <div class="generateImage">
-                        <span @click="batchGeneration(2)">{{ $t("workbench.assets.generateImage") }}</span>
-                      </div>
-                    </div>
-                  </template>
-                </t-popup>
-                <t-button theme="default" variant="outline" @click="handleBatchDelete">
-                  <template #icon>
-                    <t-icon name="delete" />
-                  </template>
+                </Button>
+                <DropdownMenu v-if="assetOptions != 'clip' && assetOptions != 'audio'">
+                  <DropdownMenuTrigger asChild>
+                    <Button>
+                      <IndentDecrease :size="16" class="mr-1" />
+                      {{ $t("workbench.assets.batchGenerate") }}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem @click="batchGeneration(1)">{{ $t("workbench.assets.generatePrompt") }}</DropdownMenuItem>
+                    <DropdownMenuItem @click="batchGeneration(2)">{{ $t("workbench.assets.generateImage") }}</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button variant="outline" @click="handleBatchDelete">
+                  <Trash2 :size="16" class="mr-1" />
                   {{ $t("workbench.assets.batchDelete") }}
-                </t-button>
-              </t-space>
-              <div class="f ac">
-                <t-input v-model="searchText" :placeholder="$t('workbench.assets.searchPlaceholder')" clearable style="width: 260px" />
-                <t-button style="margin-left: 5px" @click="handleSearch">
-                  <template #icon>
-                    <t-icon name="search" />
-                  </template>
+                </Button>
+              </div>
+              <div class="flex items-center gap-2">
+                <Input v-model="searchText" :placeholder="$t('workbench.assets.searchPlaceholder')" class="w-[260px]" />
+                <Button @click="handleSearch">
+                  <Search :size="16" class="mr-1" />
                   {{ $t("workbench.assets.search") }}
-                </t-button>
+                </Button>
               </div>
             </div>
             <div class="assetsList f w">
-              <t-table
-                v-if="['role', 'tool', 'scene'].includes(assetOptions)"
-                :columns="columns"
-                :data="tableData"
-                :selected-row-keys="selectedRowKeys"
-                :expanded-row-keys="expandedRowKeys"
-                row-key="id"
-                hover
-                height="calc(100vh - 300px)"
-                stripe
-                size="small"
-                :pagination="pagination"
-                :loading="loading"
-                lazy-load
-                table-layout="fixed"
-                :select-on-row-click="false"
-                @select-change="handleSelectChange"
-                @expand-change="handleExpandChange"
-                @page-change="handlePageChange">
-                <template #expandedRow="{ row }">
-                  <div class="expandedContent">
-                    <t-table
-                      :columns="subColumns"
-                      :data="row.sonAssets || []"
-                      :selected-row-keys="selectedSubRowKeys"
-                      row-key="id"
-                      hover
-                      size="small"
-                      table-layout="fixed"
-                      :select-on-row-click="false"
-                      @select-change="handleSubSelectChange">
-                      <template #previewWithLoading="{ row: subRow }">
-                        <div class="previewCell">
-                          <div v-if="subRow.state === '生成中'" class="imageTrigger generatingImage">
-                            <t-loading size="small" />
-                            <span class="generatingLabel">{{ $t("workbench.assets.generating") }}</span>
-                          </div>
-                          <t-image-viewer v-else :images="[subRow.src]" :closeOnEscKeydown="true" :closeOnOverlay="true">
-                            <template #trigger="{ open }">
-                              <div class="imageTrigger" @click="subRow.src && getBigImageUrl(subRow, open())">
-                                <img v-if="subRow.src" :src="subRow.src" :alt="subRow.name" class="previewImage" />
-                                <div v-else class="noImage">
-                                  <t-icon name="image" size="24px" />
-                                </div>
-                                <div v-if="subRow.src" class="imageHoverOverlay">
-                                  <t-icon name="browse" size="20px" />
-                                  <span class="hoverText">{{ $t("workbench.assets.preview") }}</span>
-                                </div>
+              <!-- Shared table for role/tool/scene/clip/audio -->
+              <div v-if="loading" class="flex items-center justify-center h-40">
+                <svg class="animate-spin h-6 w-6 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+              <div v-else class="rounded-md border border-border overflow-auto flex-1">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead class="w-12">
+                        <Checkbox
+                          :checked="selectedRowKeys.length === tableData.length && tableData.length > 0"
+                          @update:checked="(v) => (selectedRowKeys = v ? tableData.map(r => r.id) : [])"
+                        />
+                      </TableHead>
+                      <TableHead class="w-20">{{ $t("workbench.assets.col.preview") }}</TableHead>
+                      <TableHead class="w-32">{{ $t("workbench.assets.col.name") }}</TableHead>
+                      <TableHead v-if="['role','tool','scene'].includes(assetOptions)">{{ $t("workbench.assets.col.prompt") }}</TableHead>
+                      <TableHead v-if="['role','tool','scene'].includes(assetOptions)" class="w-32">{{ $t("workbench.assets.col.describe") }}</TableHead>
+                      <TableHead class="w-40">{{ $t("workbench.assets.col.operation") }}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <template v-for="row in tableData" :key="row.id">
+                      <TableRow class="hover:bg-muted/50">
+                        <TableCell>
+                          <Checkbox
+                            :checked="selectedRowKeys.includes(row.id)"
+                            @update:checked="(v) => { if (v) selectedRowKeys.push(row.id); else selectedRowKeys = selectedRowKeys.filter(k => k !== row.id); }"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <div class="previewCell">
+                            <div v-if="row.state === '生成中'" class="imageTrigger generatingImage">
+                              <Loader2 :size="16" class="animate-spin text-primary" />
+                              <span class="generatingLabel">{{ $t("workbench.assets.generating") }}</span>
+                            </div>
+                            <template v-else-if="assetOptions === 'audio'">
+                              <div class="mediaTrigger audioThumb" @click="openMediaPreview(row.src, row.name)">
+                                <Music :size="28" />
+                                <div class="mediaHoverOverlay"><PlayCircle :size="24" /></div>
                               </div>
                             </template>
-                          </t-image-viewer>
-                        </div>
-                      </template>
-                      <template #prompt="{ row: subRow }">
-                        <div class="promptCell">
-                          <t-loading v-if="subRow.promptState === '生成中'" size="small" style="margin-right: 4px" />
-                          <span :class="{ 'generating-text': subRow.promptState === '生成中' }">{{ subRow.prompt }}</span>
-                        </div>
-                      </template>
-                      <template #operation="{ row: subRow }">
-                        <t-space :size="0">
-                          <t-button theme="primary" variant="text" :disabled="isGenerating(subRow.id)" @click="generate(subRow)">
-                            <template #icon>
-                              <i-magic :size="18" />
+                            <template v-else-if="assetOptions === 'clip'">
+                              <div v-if="getMediaType(row.src) === 'video'" class="mediaTrigger videoThumb" @click="openMediaPreview(row.src, row.name)">
+                                <video :src="row.src" class="thumbVideo" /><div class="mediaHoverOverlay"><PlayCircle :size="24" /></div>
+                              </div>
+                              <div v-else-if="getMediaType(row.src) === 'audio'" class="mediaTrigger audioThumb" @click="openMediaPreview(row.src, row.name)">
+                                <Music :size="28" /><div class="mediaHoverOverlay"><PlayCircle :size="24" /></div>
+                              </div>
+                              <div v-else-if="row.src" class="imageTrigger" @click="getBigImageUrl(row, null)">
+                                <img :src="row.src" :alt="row.name" class="previewImage" />
+                                <div class="imageHoverOverlay"><Eye :size="20" /></div>
+                              </div>
+                              <div v-else class="noImage"><ImageIcon :size="24" class="text-muted-foreground" /></div>
                             </template>
-                            {{ $t("workbench.assets.generate") }}
-                          </t-button>
-                          <t-button theme="primary" variant="text" @click="handleEdit(subRow)">
-                            <template #icon>
-                              <t-icon name="edit" />
+                            <template v-else>
+                              <div v-if="row.src" class="imageTrigger" @click="getBigImageUrl(row, null)">
+                                <img :src="row.src" :alt="row.name" class="previewImage" />
+                                <div class="imageHoverOverlay"><Eye :size="20" /></div>
+                              </div>
+                              <div v-else class="noImage"><ImageIcon :size="24" class="text-muted-foreground" /></div>
                             </template>
-                            {{ $t("workbench.assets.edit") }}
-                          </t-button>
-                          <t-button theme="danger" variant="text" :disabled="isGenerating(subRow.id)" @click="handleDelete(subRow)">
-                            <template #icon>
-                              <t-icon name="delete" />
-                            </template>
-                            {{ $t("workbench.assets.delete") }}
-                          </t-button>
-                        </t-space>
-                      </template>
-                    </t-table>
-                  </div>
-                </template>
-                <template #preview="{ row }">
-                  <div class="previewCell">
-                    <t-image-viewer :images="[row.src]" :closeOnEscKeydown="true" :closeOnOverlay="true">
-                      <template #trigger="{ open }">
-                        <div class="imageTrigger" @click="row.src && getBigImageUrl(row, open())">
-                          <img v-if="row.src" :src="row.src" :alt="row.name" class="previewImage" />
-                          <div v-else class="noImage">
-                            <t-icon name="image" size="24px" />
                           </div>
-                          <div v-if="row.src" class="imageHoverOverlay">
-                            <t-icon name="browse" size="20px" />
-                            <span class="hoverText">{{ $t("workbench.assets.preview") }}</span>
+                        </TableCell>
+                        <TableCell class="text-sm font-medium">{{ row.name }}</TableCell>
+                        <TableCell v-if="['role','tool','scene'].includes(assetOptions)">
+                          <div class="promptCell text-xs text-muted-foreground line-clamp-2">
+                            <Loader2 v-if="row.promptState === '生成中'" :size="12" class="animate-spin inline mr-1 text-primary" />
+                            {{ row.prompt }}
                           </div>
-                        </div>
-                      </template>
-                    </t-image-viewer>
-                  </div>
-                </template>
-                <template #prompt="{ row }">
-                  <div class="promptCell">
-                    <t-loading v-if="row.promptState === '生成中'" size="small" style="margin-right: 4px" />
-                    <span :class="{ 'generating-text': row.promptState === '生成中' }">{{ row.prompt }}</span>
-                  </div>
-                </template>
-                <template #previewWithLoading="{ row }">
-                  <div class="previewCell">
-                    <div v-if="row.state === '生成中'" class="imageTrigger generatingImage">
-                      <t-loading size="small" />
-                      <span class="generatingLabel">{{ $t("workbench.assets.generating") }}</span>
-                    </div>
-                    <t-image-viewer v-else :images="[row.src]" :closeOnEscKeydown="true" :closeOnOverlay="true">
-                      <template #trigger="{ open }">
-                        <div class="imageTrigger" @click="row.src && getBigImageUrl(row, open())">
-                          <img v-if="row.src" :src="row.src" :alt="row.name" class="previewImage" />
-                          <div v-else class="noImage">
-                            <t-icon name="image" size="24px" />
+                        </TableCell>
+                        <TableCell v-if="['role','tool','scene'].includes(assetOptions)" class="text-xs text-muted-foreground truncate max-w-[128px]">{{ row.describe }}</TableCell>
+                        <TableCell>
+                          <div class="flex items-center gap-1">
+                            <Button v-if="['role','tool','scene'].includes(assetOptions)" variant="ghost" size="sm" :disabled="isGenerating(row.id)" @click="generate(row)">
+                              <Wand2 :size="14" class="mr-1" />{{ $t("workbench.assets.generate") }}
+                            </Button>
+                            <Button variant="ghost" size="sm" @click="handleEdit(row)">
+                              <Pencil :size="14" class="mr-1" />{{ $t("workbench.assets.edit") }}
+                            </Button>
+                            <Button variant="ghost" size="sm" class="text-destructive hover:text-destructive" :disabled="isGenerating(row.id)" @click="handleDelete(row)">
+                              <Trash2 :size="14" class="mr-1" />{{ $t("workbench.assets.delete") }}
+                            </Button>
                           </div>
-                          <div v-if="row.src" class="imageHoverOverlay">
-                            <t-icon name="browse" size="20px" />
-                            <span class="hoverText">{{ $t("workbench.assets.preview") }}</span>
+                        </TableCell>
+                      </TableRow>
+                      <!-- Sub assets row -->
+                      <TableRow v-if="row.sonAssets?.length && expandedRowKeys.includes(row.id)" :key="`sub-${row.id}`">
+                        <TableCell :colspan="6" class="p-0 bg-muted/30">
+                          <div class="pl-8 py-2">
+                            <Table>
+                              <TableBody>
+                                <TableRow v-for="subRow in row.sonAssets" :key="subRow.id" class="hover:bg-muted/50">
+                                  <TableCell class="w-12">
+                                    <Checkbox
+                                      :checked="selectedSubRowKeys.includes(subRow.id)"
+                                      @update:checked="(v) => { if (v) selectedSubRowKeys.push(subRow.id); else selectedSubRowKeys = selectedSubRowKeys.filter(k => k !== subRow.id); }"
+                                    />
+                                  </TableCell>
+                                  <TableCell class="w-20">
+                                    <div class="previewCell">
+                                      <div v-if="subRow.state === '生成中'" class="imageTrigger generatingImage">
+                                        <Loader2 :size="14" class="animate-spin text-primary" />
+                                      </div>
+                                      <div v-else-if="subRow.src" class="imageTrigger" @click="getBigImageUrl(subRow, null)">
+                                        <img :src="subRow.src" :alt="subRow.name" class="previewImage" />
+                                        <div class="imageHoverOverlay"><Eye :size="16" /></div>
+                                      </div>
+                                      <div v-else class="noImage"><ImageIcon :size="20" class="text-muted-foreground" /></div>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell class="text-xs">
+                                    <div class="promptCell">
+                                      <Loader2 v-if="subRow.promptState === '生成中'" :size="12" class="animate-spin inline mr-1 text-primary" />
+                                      {{ subRow.prompt }}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div class="flex items-center gap-1">
+                                      <Button variant="ghost" size="sm" :disabled="isGenerating(subRow.id)" @click="generate(subRow)">
+                                        <Wand2 :size="14" />
+                                      </Button>
+                                      <Button variant="ghost" size="sm" @click="handleEdit(subRow)">
+                                        <Pencil :size="14" />
+                                      </Button>
+                                      <Button variant="ghost" size="sm" class="text-destructive" :disabled="isGenerating(subRow.id)" @click="handleDelete(subRow)">
+                                        <Trash2 :size="14" />
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              </TableBody>
+                            </Table>
                           </div>
-                        </div>
-                      </template>
-                    </t-image-viewer>
-                  </div>
-                </template>
-                <template #startTime="{ row }">
-                  <span>{{ dayjs(row.startTime).format("YYYY-MM-DD HH:mm:ss") }}</span>
-                </template>
-                <template #operation="{ row }">
-                  <t-space :size="0">
-                    <t-button theme="primary" variant="text" :disabled="isGenerating(row.id)" @click="generate(row)">
-                      <template #icon>
-                        <i-magic :size="18" />
-                      </template>
-                      {{ $t("workbench.assets.generate") }}
-                    </t-button>
-                    <t-button theme="primary" variant="text" @click="handleEdit(row)">
-                      <template #icon>
-                        <t-icon name="edit" />
-                      </template>
-                      {{ $t("workbench.assets.edit") }}
-                    </t-button>
-                    <t-button theme="danger" variant="text" :disabled="isGenerating(row.id)" @click="handleDelete(row)">
-                      <template #icon>
-                        <t-icon name="delete" />
-                      </template>
-                      {{ $t("workbench.assets.delete") }}
-                    </t-button>
-                  </t-space>
-                </template>
-              </t-table>
-              <t-table
-                v-if="assetOptions == 'clip'"
-                :columns="clipColumns"
-                :data="tableData"
-                :selected-row-keys="selectedRowKeys"
-                :expanded-row-keys="expandedRowKeys"
-                row-key="id"
-                hover
-                stripe
-                size="small"
-                :pagination="pagination"
-                :loading="loading"
-                lazy-load
-                table-layout="fixed"
-                @select-change="handleSelectChange"
-                @expand-change="handleExpandChange"
-                @page-change="handlePageChange">
-                <template #preview="{ row }">
-                  <div class="previewCell">
-                    <t-image-viewer v-if="getMediaType(row.src) === 'image'" :images="[row.src]" :closeOnEscKeydown="true" :closeOnOverlay="true">
-                      <template #trigger="{ open }">
-                        <div class="mediaTrigger" @click="row.src && open()">
-                          <img :src="row.src" :alt="row.name" />
-                          <div class="mediaHoverOverlay">
-                            <t-icon name="browse" size="20px" />
-                            <span class="hoverText">{{ $t("workbench.assets.preview") }}</span>
-                          </div>
-                        </div>
-                      </template>
-                    </t-image-viewer>
-                    <div v-else-if="getMediaType(row.src) === 'video'" class="mediaTrigger videoThumb" @click="openMediaPreview(row.src, row.name)">
-                      <video :src="row.src" class="thumbVideo" />
-                      <div class="mediaHoverOverlay">
-                        <t-icon name="play-circle" size="24px" />
-                        <span class="hoverText">{{ $t("workbench.assets.play") }}</span>
-                      </div>
-                    </div>
-                    <div v-else-if="getMediaType(row.src) === 'audio'" class="mediaTrigger audioThumb" @click="openMediaPreview(row.src, row.name)">
-                      <t-icon name="music" size="28px" />
-                      <div class="mediaHoverOverlay">
-                        <t-icon name="play-circle" size="24px" />
-                        <span class="hoverText">{{ $t("workbench.assets.play") }}</span>
-                      </div>
-                    </div>
-                    <div v-else class="mediaTrigger noMedia">
-                      <t-icon name="image" size="24px" />
-                    </div>
-                  </div>
-                </template>
-                <template #startTime="{ row }">
-                  <span>{{ dayjs(row.startTime).format("YYYY-MM-DD HH:mm:ss") }}</span>
-                </template>
-                <template #operation="{ row }">
-                  <t-space :size="0">
-                    <t-button theme="primary" variant="text" @click="handleEdit(row)">
-                      <template #icon>
-                        <t-icon name="edit" />
-                      </template>
-                      {{ $t("workbench.assets.edit") }}
-                    </t-button>
-                    <t-button theme="danger" variant="text" @click="handleDelete(row)">
-                      <template #icon>
-                        <t-icon name="delete" />
-                      </template>
-                      {{ $t("workbench.assets.delete") }}
-                    </t-button>
-                  </t-space>
-                </template>
-              </t-table>
-              <t-table
-                v-if="assetOptions == 'audio'"
-                :columns="audioColumns"
-                :data="tableData"
-                :selected-row-keys="selectedRowKeys"
-                :expanded-row-keys="expandedRowKeys"
-                row-key="id"
-                hover
-                stripe
-                size="small"
-                :pagination="pagination"
-                :loading="loading"
-                lazy-load
-                table-layout="fixed"
-                @select-change="handleSelectChange"
-                @expand-change="handleExpandChange"
-                @page-change="handlePageChange">
-                <template #expandedRow="{ row }" v-if="!selectorMode">
-                  <div class="expandedContent">
-                    <t-table
-                      :columns="subAudioColumns"
-                      :data="row.sonAssets || []"
-                      :selected-row-keys="selectedSubRowKeys"
-                      row-key="id"
-                      hover
-                      size="small"
-                      table-layout="fixed"
-                      stripe
-                      :select-on-row-click="false"
-                      @select-change="handleSubSelectChange">
-                      <template #previewWithLoading="{ row: subRow }">
-                        <div class="previewCell">
-                          <div class="mediaTrigger audioThumb" @click="openMediaPreview(subRow.src, subRow.name)">
-                            <t-icon name="music" size="28px" />
-                            <div class="mediaHoverOverlay">
-                              <t-icon name="play-circle" size="24px" />
-                              <span class="hoverText">{{ $t("workbench.assets.play") }}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </template>
-                      <template #prompt="{ row: subRow }">
-                        <div class="promptCell">
-                          <span>{{ subRow.prompt }}</span>
-                        </div>
-                      </template>
-                      <template #operation="{ row: subRow }">
-                        <t-space :size="0">
-                          <t-button theme="danger" variant="text" :disabled="isGenerating(subRow.id)" @click="handleDelete(subRow)">
-                            <template #icon>
-                              <t-icon name="delete" />
-                            </template>
-                            {{ $t("workbench.assets.delete") }}
-                          </t-button>
-                        </t-space>
-                      </template>
-                    </t-table>
-                  </div>
-                </template>
-                <template #preview="{ row }">
-                  <div class="previewCell">
-                    <div class="mediaTrigger audioThumb" @click="openMediaPreview(row.src, row.name)">
-                      <t-icon name="music" size="28px" />
-                      <div class="mediaHoverOverlay">
-                        <t-icon name="play-circle" size="24px" />
-                        <span class="hoverText">{{ $t("workbench.assets.play") }}</span>
-                      </div>
-                    </div>
-                  </div>
-                </template>
-                <template #startTime="{ row }">
-                  <span>{{ dayjs(row.startTime).format("YYYY-MM-DD HH:mm:ss") }}</span>
-                </template>
-                <template #operation="{ row }">
-                  <t-space :size="0">
-                    <t-button theme="primary" variant="text" @click="handleEdit(row)">
-                      <template #icon>
-                        <t-icon name="edit" />
-                      </template>
-                      {{ $t("workbench.assets.edit") }}
-                    </t-button>
-                    <t-button theme="danger" variant="text" @click="handleDelete(row)">
-                      <template #icon>
-                        <t-icon name="delete" />
-                      </template>
-                      {{ $t("workbench.assets.delete") }}
-                    </t-button>
-                  </t-space>
-                </template>
-              </t-table>
-            </div>
-          </div>
-        </t-tab-panel>
-      </t-tabs>
+                        </TableCell>
+                      </TableRow>
+                    </template>
+                  </TableBody>
+                </Table>
+              </div>
+           </div>
+         </div>
+        </TabsContent>
+      </Tabs>
     </div>
     <addAssets
       v-model="addAssetsShow"
@@ -384,50 +203,54 @@
     <generateImage v-model="generateImageShow" @update="loadCurrentTabData" :formData="currentAssetData" />
 
     <addAudioAssets v-model="addAudioShow" v-if="addAudioShow" :formData="audioFormData" @getFilteredData="getFilteredData(assetOptions)" />
-    <t-dialog
-      v-model:visible="mediaPreviewShow"
-      :header="mediaPreviewName || $t('workbench.assets.mediaPreview')"
-      :footer="false"
-      width="600px"
-      placement="center"
-      destroyOnClose
-      @close="closeMediaPreview">
-      <div class="mediaPreviewDialog">
-        <video v-if="mediaPreviewType === 'video'" :src="mediaPreviewSrc" controls autoplay class="mediaPlayer videoPlayer" />
-        <div v-else-if="mediaPreviewType === 'audio'" class="audioWrapper">
-          <div class="audioIcon">
-            <t-icon name="music" size="64px" />
+    <!-- Media Preview Dialog -->
+    <Dialog :open="mediaPreviewShow" @update:open="(v) => { if (!v) closeMediaPreview() }">
+      <DialogContent class="max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>{{ mediaPreviewName || $t('workbench.assets.mediaPreview') }}</DialogTitle>
+        </DialogHeader>
+        <div class="mediaPreviewDialog">
+          <video v-if="mediaPreviewType === 'video'" :src="mediaPreviewSrc" controls autoplay class="mediaPlayer videoPlayer" />
+          <div v-else-if="mediaPreviewType === 'audio'" class="audioWrapper">
+            <div class="audioIcon">
+              <Music :size="64" />
+            </div>
+            <p class="audioName">{{ mediaPreviewName }}</p>
+            <audio :src="mediaPreviewSrc" controls autoplay class="mediaPlayer audioPlayer" />
           </div>
-          <p class="audioName">{{ mediaPreviewName }}</p>
-          <audio :src="mediaPreviewSrc" controls autoplay class="mediaPlayer audioPlayer" />
         </div>
-      </div>
-    </t-dialog>
-    <t-dialog
-      v-model:visible="batchGenerationShow"
-      :header="batchType"
-      width="600px"
-      top="10vh"
-      placement="center"
-      destroyOnClose
-      @confirm="keep"
-      @close="batchGenerationShow = false">
-      <div class="batch">
-        <span>{{ $t("workbench.assets.confirmBatch", { type: batchType }) }}</span>
-        <t-form labelAlign="top">
-          <t-form-item :label="$t('workbench.assets.model')" name="selectValue" v-if="batchType === $t('workbench.assets.batchGenImage')">
-            <modelSelect v-model="selectValue" :type="`image`" />
-          </t-form-item>
-          <t-form-item :label="$t('workbench.assets.resolution')" name="resolution" v-if="batchType === $t('workbench.assets.batchGenImage')">
-            <t-select v-model="resolution" :placeholder="$t('workbench.assets.resolutionPh')">
-              <t-option key="1K" label="1K" value="1K" />
-              <t-option key="2K" label="2K" value="2K" />
-              <t-option key="4K" label="4K" value="4K" />
-            </t-select>
-          </t-form-item>
-        </t-form>
-      </div>
-    </t-dialog>
+      </DialogContent>
+    </Dialog>
+    <!-- Batch Generation Dialog -->
+    <Dialog :open="batchGenerationShow" @update:open="(v) => { if (!v) batchGenerationShow = false }">
+      <DialogContent class="max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>{{ batchType }}</DialogTitle>
+        </DialogHeader>
+        <div class="batch">
+          <span>{{ $t("workbench.assets.confirmBatch", { type: batchType }) }}</span>
+          <div class="mt-4 space-y-4">
+            <div v-if="batchType === $t('workbench.assets.batchGenImage')" class="space-y-2">
+              <label class="text-sm font-medium">{{ $t('workbench.assets.model') }}</label>
+              <modelSelect v-model="selectValue" :type="`image`" />
+            </div>
+            <div v-if="batchType === $t('workbench.assets.batchGenImage')" class="space-y-2">
+              <label class="text-sm font-medium">{{ $t('workbench.assets.resolution') }}</label>
+              <select v-model="resolution" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm">
+                <option value="">{{ $t('workbench.assets.resolutionPh') }}</option>
+                <option value="1K">1K</option>
+                <option value="2K">2K</option>
+                <option value="4K">4K</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" @click="batchGenerationShow = false">{{ $t('workbench.assets.cancelBtn') }}</Button>
+          <Button @click="keep">{{ $t('workbench.assets.confirmBtn') }}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>
 
@@ -436,12 +259,35 @@ import dayjs from "dayjs";
 import modelSelect from "@/components/modelSelect.vue";
 import { useFileDialog } from "@vueuse/core";
 import axios from "@/utils/axios";
-import type { TabValue, TableProps } from "tdesign-vue-next";
+import type { TableProps } from "tdesign-vue-next";
 import addAssets from "./components/addAssets.vue";
 import addAudioAssets from "./components/addAudioAssets.vue";
 import generateImage from "./components/generateImage.vue";
 import projectStore from "@/stores/project";
 import settingStore from "@/stores/setting";
+import Tabs from "@/components/ui/Tabs.vue";
+import TabsList from "@/components/ui/TabsList.vue";
+import TabsTrigger from "@/components/ui/TabsTrigger.vue";
+import TabsContent from "@/components/ui/TabsContent.vue";
+import Button from "@/components/ui/Button.vue";
+import Dialog from "@/components/ui/Dialog.vue";
+import DialogContent from "@/components/ui/DialogContent.vue";
+import DialogHeader from "@/components/ui/DialogHeader.vue";
+import DialogTitle from "@/components/ui/DialogTitle.vue";
+import DialogFooter from "@/components/ui/DialogFooter.vue";
+import DropdownMenu from "@/components/ui/DropdownMenu.vue";
+import DropdownMenuTrigger from "@/components/ui/DropdownMenuTrigger.vue";
+import DropdownMenuContent from "@/components/ui/DropdownMenuContent.vue";
+import DropdownMenuItem from "@/components/ui/DropdownMenuItem.vue";
+import Input from "@/components/ui/Input.vue";
+import { Plus, Trash2, Search, Pencil, Eye, ImageIcon, Music, PlayCircle, Loader2, IndentDecrease, Wand2 } from "lucide-vue-next";
+import Table from "@/components/ui/Table.vue"
+import TableHeader from "@/components/ui/TableHeader.vue"
+import TableBody from "@/components/ui/TableBody.vue"
+import TableRow from "@/components/ui/TableRow.vue"
+import TableHead from "@/components/ui/TableHead.vue"
+import TableCell from "@/components/ui/TableCell.vue";
+import Checkbox from "@/components/ui/Checkbox.vue";
 const { otherSetting } = storeToRefs(settingStore());
 
 const props = withDefaults(
@@ -601,7 +447,7 @@ async function loadCurrentTabData() {
   }
   await getFilteredData(assetOptions.value);
 }
-function selectAssetOptions(value: TabValue) {
+function selectAssetOptions(value: string | number) {
   searchText.value = "";
   selectedRowKeys.value = [];
   selectedSubRowKeys.value = [];
@@ -1335,25 +1181,17 @@ async function getBigImageUrl(row: Asset, fn: Function) {
     flex-direction: column;
     overflow: hidden;
 
-    :deep(.t-tabs) {
+    :deep([role="tablist"]) {
+      display: flex;
+      flex-direction: row;
+      border-bottom: 1px solid hsl(var(--border));
+    }
+
+    :deep([role="tabpanel"]) {
       flex: 1;
       display: flex;
       flex-direction: column;
       overflow: hidden;
-
-      .t-tabs__content {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-      }
-
-      .t-tab-panel {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-      }
     }
 
     .tabLabel {

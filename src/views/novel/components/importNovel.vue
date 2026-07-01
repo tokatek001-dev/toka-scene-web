@@ -1,86 +1,145 @@
 <template>
-  <div class="purgeNovel">
-    <t-dialog :footer="false" v-model:visible="purgeNovelShow" :header="$t('workbench.novel.import.title')" width="50%" placement="center">
-      <div class="data">
-        <t-tabs :value="activeKey" disabled>
-          <t-tab-panel value="To1" :label="$t('workbench.novel.import.step1')" style="height: 680px; overflow-y: auto">
-            <div class="uploadArea" @click="triggerUpload" @dragover.prevent @drop.prevent="handleDrop">
-              <t-upload
-                ref="uploadRef"
-                v-model="fileList"
-                theme="file"
-                :multiple="false"
-                :max="1"
-                :before-upload="handleBeforeUpload"
-                :request-method="requestMethod"
-                style="display: none" />
-              <div class="dragIcon">
-                <i-upload-one theme="outline" size="32" fill="var(--td-brand-color)" />
-              </div>
-              <p class="uploadText">{{ $t("workbench.novel.import.dragUpload") }}</p>
-              <p class="uploadHint">{{ $t("workbench.novel.import.uploadHint") }}</p>
-            </div>
-            <t-divider>{{ $t("workbench.novel.import.or") }}</t-divider>
-            <div class="formItem">
-              <div class="label">{{ $t("workbench.novel.import.pasteLabel") }}</div>
-              <div class="uploadWrap">
-                <t-textarea v-model="content" :placeholder="$t('workbench.novel.import.pastePlaceholder')" :autosize="{ minRows: 12, maxRows: 12 }" />
-              </div>
-              <div class="footerInfo f ac jb" style="margin-top: 8px">
-                <div>
-                  <span class="charCount">{{ content.length }} {{ $t("workbench.novel.import.chars") }}</span>
-                  <span v-if="content.length > 0 && content.length < 100" class="tips warn">{{ $t("workbench.novel.import.tooShort") }}</span>
-                </div>
-                <span>{{ $t("workbench.novel.import.parsedChapters", { count: tableData.length }) }}</span>
-              </div>
-            </div>
+  <Dialog v-model:open="purgeNovelShow">
+    <DialogContent class="max-w-2xl h-[80vh] flex flex-col overflow-hidden p-0">
+      <DialogHeader class="px-6 pt-6 pb-0 shrink-0">
+        <DialogTitle>{{ $t('workbench.novel.import.title') }}</DialogTitle>
+      </DialogHeader>
 
-            <div style="margin-top: 16px; text-align: right">
-              <t-button theme="primary" style="margin-left: 10px" :disabled="!content || !tableData.length" @click="activeKey = 'To2'">
-                {{ $t("workbench.novel.import.nextStep") }}
-              </t-button>
-            </div>
-          </t-tab-panel>
-          <t-tab-panel value="To2" :label="$t('workbench.novel.import.step2')" style="height: 680px; overflow-y: auto">
-            <div class="fc to2Box">
-              <t-table
-                ref="tableRef"
-                row-key="index"
-                :data="tableData"
-                :columns="columns"
-                :selected-row-keys="selectedRowKeys"
-                hover
-                style="flex: 1; overflow-y: auto"
-                @select-change="onSelectChange">
-                <template #chapterData="{ row }">
-                  <t-tooltip :content="row.chapterData" placement="top">
-                    <span class="ellipsisText">{{ row.chapterData }}</span>
-                  </t-tooltip>
-                </template>
-              </t-table>
-              <div class="selectedInfo">{{ $t("workbench.novel.import.selectedInfo", { count: selectedTextLength }) }}</div>
-              <div style="margin-top: 16px; text-align: right">
-                <t-button variant="outline" @click="activeKey = 'To1'">{{ $t("workbench.novel.import.prevStep") }}</t-button>
-                <t-button theme="primary" style="margin-left: 10px" :loading="nextLoading" @click="keep">
-                  保存
-                </t-button>
-              </div>
-            </div>
-          </t-tab-panel>
-        </t-tabs>
+      <!-- Step tabs header -->
+      <div class="flex border-b border-border mx-6 mt-4 shrink-0">
+        <button
+          v-for="(step, i) in steps"
+          :key="step"
+          class="px-4 py-2 text-sm font-medium border-b-2 transition-colors"
+          :class="activeKey === step
+            ? 'border-primary text-primary'
+            : 'border-transparent text-muted-foreground opacity-50 cursor-default'"
+        >
+          {{ i + 1 }}. {{ $t(step === 'To1' ? 'workbench.novel.import.step1' : 'workbench.novel.import.step2') }}
+        </button>
       </div>
-    </t-dialog>
-  </div>
+
+      <!-- Step 1 -->
+      <div v-if="activeKey === 'To1'" class="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4">
+        <!-- Drop area -->
+        <div
+          class="border-2 border-dashed border-border rounded-lg p-10 text-center cursor-pointer transition-colors hover:border-primary"
+          @click="triggerUpload"
+          @dragover.prevent
+          @drop.prevent="handleDrop">
+          <input ref="fileInputRef" type="file" accept=".txt,.docx" class="hidden" @change="handleFileChange" />
+          <Upload :size="32" class="mx-auto mb-3 text-muted-foreground" />
+          <p class="text-sm font-medium">{{ $t("workbench.novel.import.dragUpload") }}</p>
+          <p class="text-xs text-muted-foreground mt-1">{{ $t("workbench.novel.import.uploadHint") }}</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <div class="flex-1 h-px bg-border" />
+          <span class="text-xs text-muted-foreground">{{ $t("workbench.novel.import.or") }}</span>
+          <div class="flex-1 h-px bg-border" />
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <Label>{{ $t("workbench.novel.import.pasteLabel") }}</Label>
+          <Textarea
+            v-model="content"
+            :placeholder="$t('workbench.novel.import.pastePlaceholder')"
+            class="min-h-[200px] resize-none"
+          />
+          <div class="flex items-center justify-between text-xs text-muted-foreground">
+            <div class="flex items-center gap-2">
+              <span>{{ content.length }} {{ $t("workbench.novel.import.chars") }}</span>
+              <span v-if="content.length > 0 && content.length < 100" class="text-yellow-500">
+                {{ $t("workbench.novel.import.tooShort") }}
+              </span>
+            </div>
+            <span>{{ $t("workbench.novel.import.parsedChapters", { count: tableData.length }) }}</span>
+          </div>
+        </div>
+
+        <div class="flex justify-end">
+          <Button :disabled="!content || !tableData.length" @click="activeKey = 'To2'">
+            {{ $t("workbench.novel.import.nextStep") }}
+            <ChevronRight :size="16" class="ml-1" />
+          </Button>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div v-if="activeKey === 'To2'" class="flex-1 overflow-hidden flex flex-col px-6 py-4 gap-3">
+        <div class="rounded-md border border-border overflow-auto flex-1">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead class="w-12">
+                  <Checkbox
+                    :checked="selectedRowKeys.length === tableData.length && tableData.length > 0"
+                    @update:checked="(v) => (selectedRowKeys = v ? tableData.map(r => r.index) : [])"
+                  />
+                </TableHead>
+                <TableHead class="w-16">{{ $t("workbench.novel.import.col.chapter") }}</TableHead>
+                <TableHead class="w-20">{{ $t("workbench.novel.import.col.reel") }}</TableHead>
+                <TableHead class="w-40">{{ $t("workbench.novel.import.col.chapterName") }}</TableHead>
+                <TableHead>{{ $t("workbench.novel.import.col.chapterData") }}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow v-for="row in tableData" :key="row.index" class="hover:bg-muted/50">
+                <TableCell>
+                  <Checkbox
+                    :checked="selectedRowKeys.includes(row.index)"
+                    @update:checked="(v) => {
+                      if (v) selectedRowKeys.push(row.index);
+                      else selectedRowKeys = selectedRowKeys.filter(k => k !== row.index);
+                    }"
+                  />
+                </TableCell>
+                <TableCell class="text-xs">{{ row.index }}</TableCell>
+                <TableCell class="text-sm">{{ row.reel }}</TableCell>
+                <TableCell class="text-sm truncate max-w-[160px]">{{ row.chapter }}</TableCell>
+                <TableCell class="text-xs text-muted-foreground truncate max-w-[200px]">{{ row.chapterData }}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+        <p class="text-sm text-muted-foreground shrink-0">
+          {{ $t("workbench.novel.import.selectedInfo", { count: selectedTextLength }) }}
+        </p>
+        <div class="flex justify-between shrink-0">
+          <Button variant="outline" @click="activeKey = 'To1'">
+            <ChevronLeft :size="16" class="mr-1" />
+            {{ $t("workbench.novel.import.prevStep") }}
+          </Button>
+          <Button :loading="nextLoading" @click="keep">保存</Button>
+        </div>
+      </div>
+    </DialogContent>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
-import { LoadingPlugin } from "tdesign-vue-next";
 import axios from "@/utils/axios";
 import parseNovel from "@/utils/parseNovel";
 import mammoth from "mammoth";
-import type { UploadFile, PrimaryTableCol, TableRowData } from "tdesign-vue-next";
+import Button from "@/components/ui/Button.vue";
+import Label from "@/components/ui/Label.vue";
+import Textarea from "@/components/ui/Textarea.vue";
+import Dialog from "@/components/ui/Dialog.vue"
+import DialogContent from "@/components/ui/DialogContent.vue"
+import DialogHeader from "@/components/ui/DialogHeader.vue"
+import DialogTitle from "@/components/ui/DialogTitle.vue";
+import Table from "@/components/ui/Table.vue"
+import TableHeader from "@/components/ui/TableHeader.vue"
+import TableBody from "@/components/ui/TableBody.vue"
+import TableRow from "@/components/ui/TableRow.vue"
+import TableHead from "@/components/ui/TableHead.vue"
+import TableCell from "@/components/ui/TableCell.vue";
+import Checkbox from "@/components/ui/Checkbox.vue";
+import { Upload, ChevronRight, ChevronLeft } from "lucide-vue-next";
 import projectStore from "@/stores/project";
+
 const { project } = storeToRefs(projectStore());
+
 interface ChapterItem {
   index: number;
   reel: string;
@@ -90,23 +149,13 @@ interface ChapterItem {
 
 const purgeNovelShow = defineModel<boolean>();
 
+const steps = ["To1", "To2"];
 const activeKey = ref("To1");
-const uploadRef = ref();
+const fileInputRef = ref<HTMLInputElement | null>(null);
 const content = ref("");
-const fileList = ref<any[]>([]);
 const selectedRowKeys = ref<number[]>([]);
-
 const nextLoading = ref(false);
 
-const columns: PrimaryTableCol<TableRowData>[] = [
-  { colKey: "row-select", type: "multiple", width: 60 },
-  { colKey: "index", title: $t("workbench.novel.import.col.chapter"), width: 100 },
-  { colKey: "reel", title: $t("workbench.novel.import.col.reel"), width: 100 },
-  { colKey: "chapter", title: $t("workbench.novel.import.col.chapterName"), width: 200, ellipsis: true },
-  { colKey: "chapterData", title: $t("workbench.novel.import.col.chapterData"), ellipsis: true },
-];
-
-// 解析后的章节数据
 const tableData = computed<ChapterItem[]>(() => {
   if (!content.value) return [];
   try {
@@ -124,80 +173,52 @@ const tableData = computed<ChapterItem[]>(() => {
   }
 });
 
-// 选中的行数据
 const selectedRows = computed(() => tableData.value.filter((item) => selectedRowKeys.value.includes(item.index)));
-
-// 已选文本总长度
 const selectedTextLength = computed(() => selectedRows.value.reduce((sum, item) => sum + item.chapterData.length, 0));
 
-// 触发上传
 function triggerUpload() {
-  uploadRef.value?.triggerUpload();
+  fileInputRef.value?.click();
 }
 
-// 处理拖拽上传
+async function handleFileChange(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0];
+  if (file) await processFile(file);
+}
+
 async function handleDrop(e: DragEvent) {
-  const files = e.dataTransfer?.files;
-  if (files && files.length > 0) {
-    await handleBeforeUpload({ raw: files[0] });
-  }
+  const file = e.dataTransfer?.files?.[0];
+  if (file) await processFile(file);
 }
 
-// 读取文件内容
-async function readFile(file: File): Promise<string> {
-  const buffer = await file.arrayBuffer();
-  if (file.type === "text/plain") {
-    return new TextDecoder().decode(buffer);
-  }
-  const result = await mammoth.extractRawText({ arrayBuffer: buffer });
-  return result.value;
-}
-function requestMethod() {
-  return Promise.resolve({
-    response: {},
-    status: "success",
-  } as const);
-}
-
-// 上传前校验并解析
-async function handleBeforeUpload(file: UploadFile) {
-  const rawFile = file.raw;
-  if (!rawFile) {
-    window.$message.error($t("workbench.novel.import.msg.selectFile"));
-    return false;
-  }
+async function processFile(rawFile: File) {
   const allowTypes = ["text/plain", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
-
   if (rawFile.type === "application/msword") {
     window.$message.warning($t("workbench.novel.import.msg.docNotSupported"));
-    return false;
+    return;
   }
   if (!allowTypes.includes(rawFile.type)) {
     window.$message.error($t("workbench.novel.import.msg.unsupportedType"));
-    return false;
+    return;
   }
   if (rawFile.size > 10 * 1024 * 1024) {
     window.$message.error($t("workbench.novel.import.msg.fileTooLarge"));
-    return false;
+    return;
   }
-
-  LoadingPlugin(true);
   try {
-    content.value = await readFile(rawFile);
+    const buffer = await rawFile.arrayBuffer();
+    if (rawFile.type === "text/plain") {
+      content.value = new TextDecoder().decode(buffer);
+    } else {
+      const result = await mammoth.extractRawText({ arrayBuffer: buffer });
+      content.value = result.value;
+    }
   } catch {
     window.$message.error($t("workbench.novel.import.msg.parseFailed"));
-  } finally {
-    LoadingPlugin(false);
   }
-  return false;
 }
 
-// 勾选变化
-function onSelectChange(selectedKeys: Array<string | number>, context: { selectedRowData: TableRowData[] }) {
-  selectedRowKeys.value = selectedKeys as number[];
-}
 const emit = defineEmits(["select"]);
-//保存小说
+
 async function keep() {
   nextLoading.value = true;
   if (!selectedRows.value.length) {
@@ -207,83 +228,21 @@ async function keep() {
   }
   try {
     await axios.post("/novel/addNovel", { projectId: project.value?.id, data: selectedRows.value });
-    nextLoading.value = false;
     emit("select");
     window.$message.success($t("workbench.novel.import.msg.saveSuccess"));
   } catch (e) {
     window.$message.error((e as Error).message);
-    nextLoading.value = false;
   } finally {
     nextLoading.value = false;
     purgeNovelShow.value = false;
   }
 }
-//关闭弹窗时重置数据
+
 watch(purgeNovelShow, (newVal) => {
   if (!newVal) {
     content.value = "";
-    fileList.value = [];
     selectedRowKeys.value = [];
     activeKey.value = "To1";
   }
 });
 </script>
-
-<style lang="scss" scoped>
-.purgeNovel {
-  .data {
-    .uploadArea {
-      margin-top: 20px;
-      padding: 42px 20px;
-      border: 2px dashed #969494;
-      border-radius: 8px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.2s;
-      &:hover {
-        border-color: #000000;
-      }
-
-      .dragIcon {
-        margin-bottom: 12px;
-      }
-
-      .uploadText {
-        font-size: 14px;
-        margin: 0 0 8px;
-      }
-
-      .uploadHint {
-        font-size: 12px;
-        margin: 0;
-      }
-    }
-    .to2Box {
-      height: 100%;
-    }
-    .formItem {
-      .label {
-        font-weight: 500;
-        margin-bottom: 8px;
-      }
-      .footerInfo {
-        font-size: 12px;
-        .tips.warn {
-          margin-left: 8px;
-        }
-      }
-    }
-  }
-}
-.ellipsisText {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  display: block;
-  max-width: 100%;
-}
-.selectedInfo {
-  margin-top: 12px;
-  font-size: 14px;
-}
-</style>

@@ -1,340 +1,213 @@
 <template>
-  <div class="purgeNovel">
-    <t-dialog :footer="false" v-model:visible="purgeNovelShow" :header="$t('workbench.script.import.batchTitle')" width="50%" placement="center">
-      <div class="data">
-        <t-tabs :value="activeKey" disabled>
-          <t-tab-panel value="To1" :label="$t('workbench.novel.import.step1')" style="height: 680px; overflow-y: auto">
-            <div class="regexRow f ac" style="margin-top: 10px; gap: 8px">
-              <span class="regexLabel">{{ $t("workbench.script.import.episodeRegex") }}</span>
-              <t-input
-                v-model="customRegStr"
-                :placeholder="$t('workbench.script.import.episodeRegexPh')"
-                clearable
-                :disabled="aiRegexLoading"
-                style="flex: 1"
-                :status="regexError ? 'error' : undefined"
-                :tips="regexError || undefined" />
-              <t-button :loading="aiRegexLoading" @click="getAiRegex">{{ $t("workbench.script.import.getAiRegex") }}</t-button>
-            </div>
-            <div class="uploadArea" @click="triggerUpload" @dragover.prevent @drop.prevent="handleDrop">
-              <t-upload
-                ref="uploadRef"
-                v-model="fileList"
-                theme="file"
-                :multiple="false"
-                :max="1"
-                :before-upload="handleBeforeUpload"
-                :request-method="requestMethod"
-                style="display: none" />
-              <div class="dragIcon">
-                <i-upload-one theme="outline" size="32" fill="var(--td-brand-color)" />
-              </div>
-              <p class="uploadText">{{ $t("workbench.script.add.dragUpload") }}</p>
-              <p class="uploadHint">{{ $t("workbench.novel.import.uploadHint") }}</p>
-            </div>
-            <t-divider>{{ $t("workbench.novel.import.or") }}</t-divider>
-            <div class="formItem">
-              <div class="label">{{ $t("workbench.script.import.pasteLabel") }}</div>
-              <div class="uploadWrap">
-                <t-textarea v-model="content" :placeholder="$t('workbench.script.add.scriptContentPh')" :autosize="{ minRows: 10, maxRows: 10 }" />
-              </div>
+  <Dialog v-model:open="purgeNovelShow">
+    <DialogContent class="max-w-2xl h-[80vh] flex flex-col overflow-hidden p-0">
+      <DialogHeader class="px-6 pt-6 pb-0 shrink-0">
+        <DialogTitle>{{ $t('workbench.script.import.batchTitle') }}</DialogTitle>
+      </DialogHeader>
 
-              <div class="footerInfo f ac jb" style="margin-top: 8px">
-                <div>
-                  <span class="charCount">{{ content.length }} {{ $t("workbench.novel.import.chars") }}</span>
-                  <span v-if="content.length > 0 && content.length < 100" class="tips warn">{{ $t("workbench.novel.import.tooShort") }}</span>
-                </div>
-                <span>{{ $t("workbench.script.import.parsedChapters", { count: tableData.length }) }}</span>
-              </div>
-            </div>
-
-            <div style="margin-top: 16px; text-align: right">
-              <t-button theme="primary" style="margin-left: 10px" :disabled="!content || !tableData.length" @click="activeKey = 'To2'">
-                {{ $t("workbench.novel.import.nextStep") }}
-              </t-button>
-            </div>
-          </t-tab-panel>
-          <t-tab-panel value="To2" :label="$t('workbench.novel.import.step2')" style="height: 680px; overflow-y: auto">
-            <div class="fc to2Box">
-              <t-table
-                ref="tableRef"
-                row-key="index"
-                :data="tableData"
-                :columns="columns"
-                :selected-row-keys="selectedRowKeys"
-                hover
-                style="flex: 1; overflow-y: auto"
-                @select-change="onSelectChange">
-                <template #chapterData="{ row }">
-                  <t-tooltip :content="row.chapterData" placement="top">
-                    <span class="ellipsisText">{{ row.chapterData }}</span>
-                  </t-tooltip>
-                </template>
-              </t-table>
-              <div class="selectedInfo">{{ $t("workbench.novel.import.selectedInfo", { count: selectedTextLength }) }}</div>
-              <div style="margin-top: 16px; text-align: right">
-                <t-button variant="outline" @click="activeKey = 'To1'">{{ $t("workbench.novel.import.prevStep") }}</t-button>
-                <t-button
-                  theme="primary"
-                  style="margin-left: 10px"
-                  :disabled="selectedTextLength > otherSetting.scriptEpisodeLength"
-                  :loading="nextLoading"
-                  @click="keep">
-                  保存
-                </t-button>
-              </div>
-            </div>
-          </t-tab-panel>
-        </t-tabs>
+      <!-- Step tabs -->
+      <div class="flex border-b border-border mx-6 mt-4 shrink-0">
+        <button
+          v-for="(step, i) in ['To1', 'To2']"
+          :key="step"
+          class="px-4 py-2 text-sm font-medium border-b-2 transition-colors"
+          :class="activeKey === step ? 'border-primary text-primary' : 'border-transparent text-muted-foreground opacity-50 cursor-default'"
+        >
+          {{ i + 1 }}. {{ $t(i === 0 ? 'workbench.novel.import.step1' : 'workbench.novel.import.step2') }}
+        </button>
       </div>
-    </t-dialog>
-  </div>
+
+      <!-- Step 1 -->
+      <div v-if="activeKey === 'To1'" class="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4">
+        <!-- Regex row -->
+        <div class="flex items-center gap-2">
+          <span class="text-sm font-medium shrink-0">{{ $t("workbench.script.import.episodeRegex") }}</span>
+          <div class="flex-1 relative">
+            <Input
+              v-model="customRegStr"
+              :placeholder="$t('workbench.script.import.episodeRegexPh')"
+              :disabled="aiRegexLoading"
+              :class="regexError ? 'border-destructive' : ''"
+            />
+            <p v-if="regexError" class="text-xs text-destructive mt-1">{{ regexError }}</p>
+          </div>
+          <Button size="sm" variant="outline" @click="getAiRegex" :disabled="aiRegexLoading">
+            <svg v-if="aiRegexLoading" class="animate-spin h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            </svg>
+            {{ $t("workbench.script.import.getAiRegex") }}
+          </Button>
+        </div>
+
+        <!-- Drop area -->
+        <div
+          class="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer transition-colors hover:border-primary"
+          @click="triggerUpload"
+          @dragover.prevent
+          @drop.prevent="handleDrop">
+          <input ref="fileInputRef" type="file" accept=".txt,.docx" class="hidden" @change="handleFileChange" />
+          <Upload :size="28" class="mx-auto mb-3 text-muted-foreground" />
+          <p class="text-sm font-medium">{{ $t("workbench.script.add.dragUpload") }}</p>
+          <p class="text-xs text-muted-foreground mt-1">{{ $t("workbench.novel.import.uploadHint") }}</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <div class="flex-1 h-px bg-border" /><span class="text-xs text-muted-foreground">{{ $t("workbench.novel.import.or") }}</span><div class="flex-1 h-px bg-border" />
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <Label>{{ $t("workbench.script.import.pasteLabel") }}</Label>
+          <Textarea v-model="content" :placeholder="$t('workbench.script.add.scriptContentPh')" class="min-h-[180px] resize-none" />
+          <div class="flex items-center justify-between text-xs text-muted-foreground">
+            <div class="flex items-center gap-2">
+              <span>{{ content.length }} {{ $t("workbench.novel.import.chars") }}</span>
+              <span v-if="content.length > 0 && content.length < 100" class="text-yellow-500">{{ $t("workbench.novel.import.tooShort") }}</span>
+            </div>
+            <span>{{ $t("workbench.script.import.parsedChapters", { count: tableData.length }) }}</span>
+          </div>
+        </div>
+
+        <div class="flex justify-end">
+          <Button :disabled="!content || !tableData.length" @click="activeKey = 'To2'">
+            {{ $t("workbench.novel.import.nextStep") }}<ChevronRight :size="16" class="ml-1" />
+          </Button>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div v-if="activeKey === 'To2'" class="flex-1 overflow-hidden flex flex-col px-6 py-4 gap-3">
+        <div class="rounded-md border border-border overflow-auto flex-1">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead class="w-12">
+                  <Checkbox
+                    :checked="selectedRowKeys.length === tableData.length && tableData.length > 0"
+                    @update:checked="(v) => (selectedRowKeys = v ? tableData.map(r => r.index) : [])"
+                  />
+                </TableHead>
+                <TableHead class="w-16">{{ $t("workbench.script.import.col.chapter") }}</TableHead>
+                <TableHead class="w-48">{{ $t("workbench.script.import.col.scriptName") }}</TableHead>
+                <TableHead>{{ $t("workbench.script.import.col.scriptData") }}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow v-for="row in tableData" :key="row.index" class="hover:bg-muted/50">
+                <TableCell>
+                  <Checkbox
+                    :checked="selectedRowKeys.includes(row.index)"
+                    @update:checked="(v) => { if (v) selectedRowKeys.push(row.index); else selectedRowKeys = selectedRowKeys.filter(k => k !== row.index); }"
+                  />
+                </TableCell>
+                <TableCell class="text-xs">{{ row.index }}</TableCell>
+                <TableCell class="text-sm truncate max-w-[192px]">{{ row.scriptName }}</TableCell>
+                <TableCell class="text-xs text-muted-foreground truncate max-w-[200px]">{{ row.scriptData }}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+        <p class="text-sm text-muted-foreground shrink-0">{{ $t("workbench.novel.import.selectedInfo", { count: selectedTextLength }) }}</p>
+        <div class="flex justify-between shrink-0">
+          <Button variant="outline" @click="activeKey = 'To1'"><ChevronLeft :size="16" class="mr-1" />{{ $t("workbench.novel.import.prevStep") }}</Button>
+          <Button :disabled="selectedTextLength > otherSetting.scriptEpisodeLength" :loading="nextLoading" @click="keep">保存</Button>
+        </div>
+      </div>
+    </DialogContent>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
 import settingStore from "@/stores/setting";
 const { otherSetting } = storeToRefs(settingStore());
-import { LoadingPlugin } from "tdesign-vue-next";
 import axios from "@/utils/axios";
 import parseScript from "@/utils/parseScript";
 import mammoth from "mammoth";
-import type { UploadFile, PrimaryTableCol, TableRowData } from "tdesign-vue-next";
 import projectStore from "@/stores/project";
 const { project } = storeToRefs(projectStore());
-interface ChapterItem {
-  index: number;
-  scriptName: string;
-  scriptData: string;
-}
+import Button from "@/components/ui/Button.vue";
+import Input from "@/components/ui/Input.vue";
+import Label from "@/components/ui/Label.vue";
+import Textarea from "@/components/ui/Textarea.vue";
+import Dialog from "@/components/ui/Dialog.vue"
+import DialogContent from "@/components/ui/DialogContent.vue"
+import DialogHeader from "@/components/ui/DialogHeader.vue"
+import DialogTitle from "@/components/ui/DialogTitle.vue";
+import Table from "@/components/ui/Table.vue"
+import TableHeader from "@/components/ui/TableHeader.vue"
+import TableBody from "@/components/ui/TableBody.vue"
+import TableRow from "@/components/ui/TableRow.vue"
+import TableHead from "@/components/ui/TableHead.vue"
+import TableCell from "@/components/ui/TableCell.vue";
+import Checkbox from "@/components/ui/Checkbox.vue";
+import { Upload, ChevronRight, ChevronLeft } from "lucide-vue-next";
+
+interface ChapterItem { index: number; scriptName: string; scriptData: string; }
 
 const purgeNovelShow = defineModel<boolean>();
-
 const activeKey = ref("To1");
-const uploadRef = ref();
+const fileInputRef = ref<HTMLInputElement | null>(null);
 const content = ref("");
-const fileList = ref<any[]>([]);
 const selectedRowKeys = ref<number[]>([]);
-
 const nextLoading = ref(false);
 const customRegStr = ref("");
 const regexError = ref("");
 const aiRegexLoading = ref(false);
 
-// 验证正则合法性
 watch(customRegStr, (val) => {
-  if (!val.trim()) {
-    regexError.value = "";
-    return;
-  }
+  if (!val.trim()) { regexError.value = ""; return; }
   try {
     const m = val.match(/^\/(.*)\/([ igmuy]*)$/);
-    new RegExp(m ? m[1] : val);
-    regexError.value = "";
-  } catch {
-    regexError.value = $t("workbench.script.import.regexInvalid");
-  }
+    new RegExp(m ? m[1] : val); regexError.value = "";
+  } catch { regexError.value = $t("workbench.script.import.regexInvalid"); }
 });
 
-const columns: PrimaryTableCol<TableRowData>[] = [
-  { colKey: "row-select", type: "multiple", width: 60 },
-  { colKey: "index", title: $t("workbench.script.import.col.chapter"), width: 100 },
-  { colKey: "scriptName", title: $t("workbench.script.import.col.scriptName"), width: 200, ellipsis: true },
-  { colKey: "scriptData", title: $t("workbench.script.import.col.scriptData"), ellipsis: true },
-];
-
-// 解析后的章节数据
 const tableData = computed<ChapterItem[]>(() => {
   if (!content.value) return [];
   try {
-    return parseScript(content.value, customRegStr.value || undefined).map((ep) => ({
-      index: ep.index,
-      scriptName: ep.chapter,
-      scriptData: ep.text,
-    }));
-  } catch (e) {
-    console.error("解析剧本内容出错:", e);
-    return [];
-  }
+    return parseScript(content.value, customRegStr.value || undefined).map((ep) => ({ index: ep.index, scriptName: ep.chapter, scriptData: ep.text }));
+  } catch { return []; }
 });
 
-// 选中的行数据
 const selectedRows = computed(() => tableData.value.filter((item) => selectedRowKeys.value.includes(item.index)));
-
-// 已选文本总长度
 const selectedTextLength = computed(() => selectedRows.value.reduce((sum, item) => sum + item.scriptData.length, 0));
 
-// 触发上传
-function triggerUpload() {
-  uploadRef.value?.triggerUpload();
-}
+function triggerUpload() { fileInputRef.value?.click(); }
+async function handleFileChange(e: Event) { const file = (e.target as HTMLInputElement).files?.[0]; if (file) await processFile(file); }
+async function handleDrop(e: DragEvent) { const file = e.dataTransfer?.files?.[0]; if (file) await processFile(file); }
 
-// 处理拖拽上传
-async function handleDrop(e: DragEvent) {
-  const files = e.dataTransfer?.files;
-  if (files && files.length > 0) {
-    await handleBeforeUpload({ raw: files[0] });
-  }
-}
-
-// 读取文件内容
-async function readFile(file: File): Promise<string> {
-  const buffer = await file.arrayBuffer();
-  if (file.type === "text/plain") {
-    return new TextDecoder().decode(buffer);
-  }
-  const result = await mammoth.extractRawText({ arrayBuffer: buffer });
-  return result.value;
-}
-function requestMethod() {
-  return Promise.resolve({
-    response: {},
-    status: "success",
-  } as const);
-}
-
-// 上传前校验并解析
-async function handleBeforeUpload(file: UploadFile) {
-  const rawFile = file.raw;
-  if (!rawFile) {
-    window.$message.error($t("workbench.novel.import.msg.selectFile"));
-    return false;
-  }
+async function processFile(rawFile: File) {
   const allowTypes = ["text/plain", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
-
-  if (rawFile.type === "application/msword") {
-    window.$message.warning($t("workbench.novel.import.msg.docNotSupported"));
-    return false;
-  }
-  if (!allowTypes.includes(rawFile.type)) {
-    window.$message.error($t("workbench.novel.import.msg.unsupportedType"));
-    return false;
-  }
-  if (rawFile.size > 10 * 1024 * 1024) {
-    window.$message.error($t("workbench.novel.import.msg.fileTooLarge"));
-    return false;
-  }
-
-  LoadingPlugin(true);
+  if (rawFile.type === "application/msword") { window.$message.warning($t("workbench.novel.import.msg.docNotSupported")); return; }
+  if (!allowTypes.includes(rawFile.type)) { window.$message.error($t("workbench.novel.import.msg.unsupportedType")); return; }
+  if (rawFile.size > 10 * 1024 * 1024) { window.$message.error($t("workbench.novel.import.msg.fileTooLarge")); return; }
   try {
-    content.value = await readFile(rawFile);
-  } catch {
-    window.$message.error($t("workbench.novel.import.msg.parseFailed"));
-  } finally {
-    LoadingPlugin(false);
-  }
-  return false;
+    const buffer = await rawFile.arrayBuffer();
+    content.value = rawFile.type === "text/plain" ? new TextDecoder().decode(buffer) : (await mammoth.extractRawText({ arrayBuffer: buffer })).value;
+  } catch { window.$message.error($t("workbench.novel.import.msg.parseFailed")); }
 }
 
-// 勾选变化
-function onSelectChange(selectedKeys: Array<string | number>, context: { selectedRowData: TableRowData[] }) {
-  selectedRowKeys.value = selectedKeys as number[];
-}
 const emit = defineEmits(["select"]);
 async function keep() {
   nextLoading.value = true;
-  if (!selectedRows.value.length) {
-    window.$message.warning($t("workbench.script.import.msg.selectChapters"));
-    nextLoading.value = false;
-    return;
-  }
+  if (!selectedRows.value.length) { window.$message.warning($t("workbench.script.import.msg.selectChapters")); nextLoading.value = false; return; }
   try {
     await axios.post("/script/batchAddScript", { projectId: project.value?.id, data: selectedRows.value });
-    emit("select");
-    window.$message.success($t("workbench.script.import.msg.saveSuccess"));
-    purgeNovelShow.value = false;
-  } catch (e) {
-    window.$message.error((e as Error).message);
-  } finally {
-    nextLoading.value = false;
-  }
+    emit("select"); window.$message.success($t("workbench.script.import.msg.saveSuccess")); purgeNovelShow.value = false;
+  } catch (e) { window.$message.error((e as Error).message); }
+  finally { nextLoading.value = false; }
 }
-//关闭弹窗时重置数据
+
 watch(purgeNovelShow, (newVal) => {
-  if (!newVal) {
-    content.value = "";
-    fileList.value = [];
-    selectedRowKeys.value = [];
-    activeKey.value = "To1";
-    customRegStr.value = "";
-    regexError.value = "";
-  }
+  if (!newVal) { content.value = ""; selectedRowKeys.value = []; activeKey.value = "To1"; customRegStr.value = ""; regexError.value = ""; }
 });
 
 async function getAiRegex() {
-  if (!content.value.trim()) {
-    window.$message.warning($t("workbench.script.import.msg.selectChapters"));
-    return;
-  }
-  const sample = content.value.slice(0, 2000);
+  if (!content.value.trim()) { window.$message.warning($t("workbench.script.import.msg.selectChapters")); return; }
   aiRegexLoading.value = true;
   try {
-    const { data } = await axios.post("/script/getAiRegex", { content: sample });
-    if (data) {
-      customRegStr.value = data;
-    }
-  } catch (e) {
-    window.$message.error((e as Error).message);
-  } finally {
-    aiRegexLoading.value = false;
-  }
+    const { data } = await axios.post("/script/getAiRegex", { content: content.value.slice(0, 2000) });
+    if (data) customRegStr.value = data;
+  } catch (e) { window.$message.error((e as Error).message); }
+  finally { aiRegexLoading.value = false; }
 }
 </script>
-
-<style lang="scss" scoped>
-.purgeNovel {
-  .data {
-    .uploadArea {
-      margin-top: 20px;
-      padding: 38px 16px;
-      border: 2px dashed #969494;
-      border-radius: 8px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.2s;
-      &:hover {
-        border-color: #000000;
-      }
-
-      .dragIcon {
-        margin-bottom: 12px;
-      }
-
-      .uploadText {
-        font-size: 14px;
-        margin: 0 0 8px;
-      }
-
-      .uploadHint {
-        font-size: 12px;
-        margin: 0;
-      }
-    }
-    .to2Box {
-      height: 100%;
-    }
-    .formItem {
-      .label {
-        font-weight: 500;
-        margin-bottom: 8px;
-      }
-      .footerInfo {
-        font-size: 12px;
-        .tips.warn {
-          margin-left: 8px;
-        }
-      }
-    }
-  }
-}
-.ellipsisText {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  display: block;
-  max-width: 100%;
-}
-.selectedInfo {
-  margin-top: 12px;
-  font-size: 14px;
-}
-</style>

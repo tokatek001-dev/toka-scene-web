@@ -1,108 +1,170 @@
 <template>
   <div class="novel" ref="novelRef">
     <div class="headBtn jb ac" ref="headBtnRef">
-      <t-space>
-        <t-button theme="primary" @click="importNovelFn">
-          <template #icon>
-            <t-icon name="add" />
-          </template>
+      <div class="flex items-center gap-2">
+        <Button @click="importNovelFn">
+          <Plus :size="16" class="mr-2" />
           {{ $t("workbench.novel.importText") }}
-        </t-button>
-        <t-button theme="danger" :disabled="selectedRowKeys.length === 0" @click="handleBatchDelete">
-          <template #icon>
-            <t-icon name="delete" />
-          </template>
+        </Button>
+        <Button variant="destructive" :disabled="selectedRowKeys.length === 0" @click="handleBatchDelete">
+          <Trash2 :size="16" class="mr-2" />
           {{ $t("workbench.novel.batchDelete") }} {{ selectedRowKeys.length > 0 ? `(${selectedRowKeys.length})` : "" }}
-        </t-button>
-        <t-button @click="startEventAnalysis" :disabled="selectedRowKeys.length === 0">
-          <template #icon>
-            <t-icon name="analytics" />
-          </template>
+        </Button>
+        <Button variant="outline" @click="startEventAnalysis" :disabled="selectedRowKeys.length === 0">
+          <BarChart2 :size="16" class="mr-2" />
           {{ $t("workbench.novel.eventAnalysis") }} {{ selectedRowKeys.length > 0 ? `(${selectedRowKeys.length})` : "" }}
-        </t-button>
-      </t-space>
-      <div class="f">
-        <t-input v-model="searchText" :placeholder="$t('workbench.novel.searchPlaceholder')" clearable style="width: 260px" />
-        <t-button @click="onChange" style="margin-left: 10px">
-          <template #icon><t-icon name="search" /></template>
+        </Button>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="relative">
+          <Search :size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input v-model="searchText" :placeholder="$t('workbench.novel.searchPlaceholder')" class="pl-9 w-64" />
+        </div>
+        <Button variant="outline" @click="onChange">
           {{ $t("workbench.novel.search") }}
-        </t-button>
+        </Button>
       </div>
     </div>
-    <t-table
-      ref="tableRef"
-      style="margin-top: 10px; flex: 1; display: flex; flex-direction: column"
-      :columns="columns"
-      :data="tableData"
-      :selected-row-keys="selectedRowKeys"
-      :select-on-row-click="true"
-      :keyboardRowHover="false"
-      row-key="id"
-      hover
-      stripe
-      size="small"
-      :pagination="pagination"
-      :loading="loading"
-      lazy-load
-      table-layout="fixed"
-      @select-change="handleSelectChange"
-      @page-change="handlePageChange">
-      <template #startTime="{ row }">
-        <span>{{ dayjs(row.startTime).format("YYYY-MM-DD HH:mm:ss") }}</span>
-      </template>
-      <template #event="{ row }">
-        <t-loading v-if="row.eventState == 0" size="small" :text="$t('workbench.novel.generating')"></t-loading>
-        <t-button
-          v-else-if="row.eventState == -1 && !row.event"
-          theme="danger"
-          variant="text"
-          size="small"
-          @click.stop="openPreview($t('workbench.novel.genFailed'), row?.errorReason)">
-          {{ $t("workbench.novel.genFailed") }}
-        </t-button>
-        <div v-else class="eventCell">
-          <div class="eventPreview">{{ formatPreview(row.event) }}</div>
-          <t-link
-            v-if="row.event && row.event.length > PREVIEW_MAX_LENGTH"
-            theme="success"
-            hover="color"
-            @click="openPreview($t('workbench.novel.col.event'), row.event)">
-            {{ $t("workbench.novel.viewDetail") }}
-          </t-link>
+
+    <div class="mt-4 flex-1 overflow-hidden flex flex-col border border-border rounded-md">
+      <div v-if="loading" class="flex items-center justify-center h-64">
+        <div class="flex flex-col items-center gap-2">
+          <svg class="animate-spin h-6 w-6 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span class="text-sm text-muted-foreground">{{ $t("workbench.novel.generating") }}</span>
         </div>
-      </template>
-      <template #chapterData="{ row }">
-        <div class="chapterDataCell">
-          <div class="chapterPreview">{{ formatPreview(row.chapterData) }}</div>
-          <t-link
-            v-if="row.chapterData && row.chapterData.length > PREVIEW_MAX_LENGTH"
-            theme="success"
-            hover="color"
-            @click.stop="openPreview($t('workbench.novel.col.chapterData'), row.chapterData)">
-            {{ $t("workbench.novel.viewDetail") }}
-          </t-link>
+      </div>
+      <Table v-else>
+        <TableHeader>
+          <TableRow>
+            <TableHead class="w-12">
+              <Checkbox
+                :checked="selectedRowKeys.length === tableData.length && tableData.length > 0"
+                @update:checked="(v) => (selectedRowKeys = v ? tableData.map(r => r.id) : [])"
+              />
+            </TableHead>
+            <TableHead class="w-12">{{ $t("workbench.novel.col.id") }}</TableHead>
+            <TableHead class="w-24">{{ $t("workbench.novel.col.reel") }}</TableHead>
+            <TableHead class="w-32">{{ $t("workbench.novel.col.chapter") }}</TableHead>
+            <TableHead>{{ $t("workbench.novel.col.chapterData") }}</TableHead>
+            <TableHead>{{ $t("workbench.novel.col.event") }}</TableHead>
+            <TableHead class="w-40">{{ $t("workbench.novel.col.operation") }}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <TableRow v-for="(row, index) in tableData" :key="row.id" class="hover:bg-muted/50">
+            <TableCell>
+              <Checkbox
+                :checked="selectedRowKeys.includes(row.id)"
+                @update:checked="(v) => {
+                  if (v) selectedRowKeys.push(row.id); else selectedRowKeys = selectedRowKeys.filter(k => k !== row.id);
+                }"
+              />
+            </TableCell>
+            <TableCell class="text-xs text-muted-foreground">{{ row.index }}</TableCell>
+            <TableCell class="text-sm">{{ row.reel }}</TableCell>
+            <TableCell class="text-sm truncate max-w-[128px]">{{ row.chapter }}</TableCell>
+            <TableCell>
+              <div class="text-sm text-muted-foreground truncate max-w-[200px]">
+                {{ formatPreview(row.chapterData) }}
+              </div>
+              <Button
+                v-if="row.chapterData && row.chapterData.length > PREVIEW_MAX_LENGTH"
+                variant="link"
+                size="sm"
+                class="text-primary h-auto p-0 mt-1"
+                @click="openPreview($t('workbench.novel.col.chapterData'), row.chapterData)">
+                {{ $t("workbench.novel.viewDetail") }}
+              </Button>
+            </TableCell>
+            <TableCell>
+              <div v-if="row.eventState === 0" class="flex items-center gap-1">
+                <svg class="animate-spin h-4 w-4 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                </svg>
+                <span class="text-xs text-muted-foreground">{{ $t("workbench.novel.generating") }}</span>
+              </div>
+              <Button
+                v-else-if="row.eventState === -1 && !row.event"
+                variant="link"
+                size="sm"
+                class="text-destructive h-auto p-0"
+                @click="openPreview($t('workbench.novel.genFailed'), row?.errorReason)">
+                {{ $t("workbench.novel.genFailed") }}
+              </Button>
+              <div v-else class="text-sm text-muted-foreground truncate max-w-[200px]">
+                {{ formatPreview(row.event) }}
+                <Button
+                  v-if="row.event && row.event.length > PREVIEW_MAX_LENGTH"
+                  variant="link"
+                  size="sm"
+                  class="text-primary h-auto p-0 mt-1 ml-1"
+                  @click="openPreview($t('workbench.novel.col.event'), row.event)">
+                  {{ $t("workbench.novel.viewDetail") }}
+                </Button>
+              </div>
+            </TableCell>
+            <TableCell>
+              <div class="flex items-center gap-1">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  :disabled="row.eventState === 0"
+                  @click="handleEdit(row)">
+                  <Edit2 :size="14" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  :disabled="row.eventState === 0"
+                  @click="handleDelete(row)">
+                  <Trash2 :size="14" class="text-destructive" />
+                </Button>
+              </div>
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+    </div>
+
+    <div v-if="!loading && tableData.length > 0" class="flex items-center justify-between mt-4">
+      <p class="text-sm text-muted-foreground">
+        {{ $t("workbench.novel.total") }} {{ pagination.total }}
+      </p>
+      <div class="flex items-center gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          :disabled="pagination.page <= 1"
+          @click="pagination.page--; getNovel()">
+          <ChevronLeft :size="16" />
+        </Button>
+        <span class="text-sm text-muted-foreground">
+          {{ pagination.page }} / {{ Math.ceil(pagination.total / pagination.pageSize) }}
+        </span>
+        <Button
+          size="sm"
+          variant="outline"
+          :disabled="pagination.page >= Math.ceil(pagination.total / pagination.pageSize)"
+          @click="pagination.page++; getNovel()">
+          <ChevronRight :size="16" />
+        </Button>
+      </div>
+    </div>
+
+    <Dialog v-model:open="previewVisible">
+      <DialogContent class="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{{ previewTitle }}</DialogTitle>
+        </DialogHeader>
+        <div class="text-sm text-foreground whitespace-pre-wrap word-break-break-word py-4">
+          {{ previewContent || $t("workbench.novel.none") }}
         </div>
-      </template>
-      <template #operation="{ row }">
-        <t-space :size="0">
-          <t-button theme="primary" :disabled="row.eventState == 0" variant="text" @click="handleEdit(row)">
-            <template #icon>
-              <t-icon name="edit" />
-            </template>
-            {{ $t("workbench.novel.edit") }}
-          </t-button>
-          <t-button theme="danger" :disabled="row.eventState == 0" variant="text" @click="handleDelete(row)">
-            <template #icon>
-              <t-icon name="delete" />
-            </template>
-            {{ $t("workbench.novel.delete") }}
-          </t-button>
-        </t-space>
-      </template>
-    </t-table>
-    <t-dialog v-model:visible="previewVisible" :header="previewTitle" width="900px" placement="top" top="10vh" destroy-on-close :footer="false">
-      <div class="previewDialogContent">{{ previewContent || $t("workbench.novel.none") }}</div>
-    </t-dialog>
+      </DialogContent>
+    </Dialog>
+
     <importNovel v-model="importNovelShow" @select="getNovel" />
     <editNodel v-model="editNodelShow" :formData="formData" @select="getNovel" />
   </div>
@@ -115,31 +177,22 @@ import importNovel from "./components/importNovel.vue";
 import editNodel from "./components/editNodel.vue";
 import projectStore from "@/stores/project";
 import settingStore from "@/stores/setting";
+import Button from "@/components/ui/Button.vue";
+import Input from "@/components/ui/Input.vue";
+import Card from "@/components/ui/Card.vue";
+import CardHeader from "@/components/ui/CardHeader.vue";
+import CardTitle from "@/components/ui/CardTitle.vue";
+import CardContent from "@/components/ui/CardContent.vue";
+import Badge from "@/components/ui/Badge.vue";
+import Checkbox from "@/components/ui/Checkbox.vue";
+import { Plus, Trash2, Search, Download, Layers, FileText } from "lucide-vue-next";
+
 const { otherSetting } = storeToRefs(settingStore());
 const { project } = storeToRefs(projectStore());
 
 // 搜索文本
 const searchText = ref("");
-// 表头
-const columns = ref<Record<string, unknown>[]>([
-  {
-    colKey: "row-select",
-    type: "multiple",
-    width: 50,
-    align: "center",
-  },
-  {
-    colKey: "index",
-    title: $t("workbench.novel.col.id"),
-    width: 50,
-    align: "center",
-  },
-  { colKey: "reel", title: $t("workbench.novel.col.reel"), width: 100, align: "center", cell: "preview" },
-  { colKey: "chapter", title: $t("workbench.novel.col.chapter"), width: 100, ellipsis: true },
-  { colKey: "chapterData", title: $t("workbench.novel.col.chapterData"), ellipsis: true },
-  { colKey: "event", title: $t("workbench.novel.col.event"), ellipsis: true },
-  { colKey: "operation", title: $t("workbench.novel.col.operation"), width: 200, align: "center" },
-]);
+
 const editNodelShow = ref(false);
 interface OriginalText {
   id: number;
@@ -189,6 +242,7 @@ onMounted(() => {
 onUnmounted(() => {
   stopPolling();
 });
+
 function onChange() {
   pagination.value.page = 1;
   getNovel();
@@ -211,22 +265,13 @@ function getNovel() {
       loading.value = false;
     });
 }
-// 处理分页变化
-function handlePageChange(pageInfo: { current: number; pageSize: number }) {
-  pagination.value.page = pageInfo.current;
-  pagination.value.pageSize = pageInfo.pageSize;
-  getNovel();
-}
+
 const importNovelShow = ref(false);
-// 导入原文
+
 function importNovelFn() {
   importNovelShow.value = true;
 }
-// 处理选择变化
-function handleSelectChange(value: Array<string | number>, context: { selectedRowData: any[] }) {
-  selectedRowKeys.value = value.filter(Boolean);
-}
-// 批量删除
+
 function handleBatchDelete() {
   if (selectedRowKeys.value.length === 0) return;
   const dialog = DialogPlugin.confirm({
@@ -242,12 +287,12 @@ function handleBatchDelete() {
     },
   });
 }
-// 编辑
+
 function handleEdit(row: OriginalText) {
   editNodelShow.value = true;
   formData.value = { ...row };
 }
-// 删除
+
 function handleDelete(row: OriginalText) {
   const dialog = DialogPlugin.confirm({
     header: $t("workbench.novel.msg.deleteHeader"),
@@ -263,7 +308,6 @@ function handleDelete(row: OriginalText) {
       } catch (e) {
         window.$message.error((e as Error).message);
       }
-      window.$message.success($t("workbench.novel.msg.deleteSuccess"));
       dialog.destroy();
     },
   });
@@ -341,6 +385,7 @@ watch(notCompultedData, (val) => {
     stopPolling();
   }
 });
+
 onUnmounted(() => {
   stopPolling();
 });
@@ -353,43 +398,14 @@ onUnmounted(() => {
   flex-direction: column;
   box-sizing: border-box;
   padding-bottom: 16px;
+  padding-right: 16px;
+  padding-left: 16px;
+  
   .headBtn {
     margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
-}
-:deep(.t-table__content) {
-  flex: 1;
-}
-
-.chapterDataCell {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.chapterPreview {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.eventCell {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.eventPreview {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.previewDialogContent {
-  max-height: 65vh;
-  overflow: auto;
-  line-height: 1.7;
-  white-space: pre-wrap;
-  word-break: break-word;
 }
 </style>

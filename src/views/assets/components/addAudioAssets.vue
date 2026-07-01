@@ -1,70 +1,87 @@
 <template>
-  <t-dialog
-    v-model:visible="addAssetsShow"
-    :closable="false"
-    width="40vw"
-    :header="props.formData.id ? '编辑' : '新增'"
-    :maskClosable="false"
-    @close-btn-click="handleCancel"
-    @confirm="onConfirm"
-    @cancel="handleCancel">
-    <div class="data">
-      <t-form :data="props.formData" :rules="rules" ref="formRef">
-        <t-form-item :label="$t('workbench.assets.add.audioName')" name="name">
-          <t-input v-model="props.formData.name" :placeholder="$t('workbench.assets.add.audioNamePh')"></t-input>
-        </t-form-item>
-        <t-form-item :label="$t('workbench.assets.add.describe')" name="describe">
-          <t-textarea v-model="props.formData.describe" :placeholder="$t('workbench.assets.add.describePh')"></t-textarea>
-        </t-form-item>
-        <t-form-item :label="$t('workbench.assets.add.sex')" name="remark">
-          <t-input v-model="props.formData.sex" :placeholder="$t('workbench.assets.add.sexPh')"></t-input>
-        </t-form-item>
-        <t-form-item :label="$t('workbench.assets.add.audioFile')" name="audioFile">
-          <div class="audio-list">
-            <div v-for="(item, index) in audioItems" :key="index" class="audio-item">
-              <div class="audio-upload-row">
-                <div class="audio-file-area" @click="triggerFileInput(index)" @dragover.prevent @drop.prevent="(e) => handleDrop(e, index)">
-                  <template v-if="item.file">
-                    <i-volume-notice size="16" />
-                    <span class="audio-filename">{{ item.file.name }}</span>
-                  </template>
-                  <template v-else-if="item.src">
-                    <i-volume-notice size="16" fill="var(--td-success-color)" />
-                    <span class="audio-filename audio-filename--existing">{{ item.name }}</span>
-                    <t-tag size="small" theme="success" variant="light" style="margin-left: auto; flex-shrink: 0">已上传</t-tag>
-                  </template>
-                  <template v-else>
-                    <i-upload-one size="16" fill="var(--td-brand-color)" />
-                    <span class="audio-upload-hint">点击或拖拽上传音频</span>
-                  </template>
-                  <input
-                    :ref="(el) => (fileInputRefs[index] = el as HTMLInputElement)"
-                    type="file"
-                    accept="audio/*"
-                    style="display: none"
-                    @change="(e) => handleFileChange(e, index)" />
-                </div>
-                <t-button theme="danger" variant="outline" shape="circle" size="small" @click="removeAudioItem(index)">
-                  <template #icon><i-close size="12" /></template>
-                </t-button>
-              </div>
-              <t-input v-model="item.text" placeholder="请输入该音频对应的文本内容" class="audio-text-input" />
-              <t-input v-model="item.describe" placeholder="请输入该音频的描述" class="audio-text-input" />
-            </div>
-            <t-button theme="primary" variant="outline" size="small" @click="addAudioItem">
-              <template #icon><i-plus /></template>
-              添加音频
-            </t-button>
+  <Dialog :open="addAssetsShow" @update:open="(v) => { if (!v) handleCancel() }">
+    <DialogContent class="max-w-[40vw]">
+      <DialogHeader>
+        <DialogTitle>{{ props.formData.id ? '编辑' : '新增' }}</DialogTitle>
+      </DialogHeader>
+      <div class="data">
+        <div class="space-y-4">
+          <div class="space-y-2">
+            <label class="text-sm font-medium">{{ $t('workbench.assets.add.audioName') }}</label>
+            <Input v-model="props.formData.name" :placeholder="$t('workbench.assets.add.audioNamePh')" />
           </div>
-        </t-form-item>
-      </t-form>
-    </div>
-  </t-dialog>
+          <div class="space-y-2">
+            <label class="text-sm font-medium">{{ $t('workbench.assets.add.describe') }}</label>
+            <textarea
+              v-model="props.formData.describe"
+              :placeholder="$t('workbench.assets.add.describePh')"
+              class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" />
+          </div>
+          <div class="space-y-2">
+            <label class="text-sm font-medium">{{ $t('workbench.assets.add.sex') }}</label>
+            <Input v-model="props.formData.sex" :placeholder="$t('workbench.assets.add.sexPh')" />
+          </div>
+          <div class="space-y-2">
+            <label class="text-sm font-medium">{{ $t('workbench.assets.add.audioFile') }}</label>
+            <div class="audio-list">
+              <div v-for="(item, index) in audioItems" :key="index" class="audio-item">
+                <div class="audio-upload-row">
+                  <div class="audio-file-area" @click="triggerFileInput(index)" @dragover.prevent @drop.prevent="(e) => handleDrop(e, index)">
+                    <template v-if="item.file">
+                      <i-volume-notice size="16" />
+                      <span class="audio-filename">{{ item.file.name }}</span>
+                    </template>
+                    <template v-else-if="item.src">
+                      <i-volume-notice size="16" fill="var(--td-success-color)" />
+                      <span class="audio-filename audio-filename--existing">{{ item.name }}</span>
+                      <span class="ml-auto flex-shrink-0 text-xs px-2 py-0.5 rounded bg-green-100 text-green-700">已上传</span>
+                    </template>
+                    <template v-else>
+                      <i-upload-one size="16" fill="var(--td-brand-color)" />
+                      <span class="audio-upload-hint">点击或拖拽上传音频</span>
+                    </template>
+                    <input
+                      :ref="(el) => (fileInputRefs[index] = el as HTMLInputElement)"
+                      type="file"
+                      accept="audio/*"
+                      style="display: none"
+                      @change="(e) => handleFileChange(e, index)" />
+                  </div>
+                  <Button variant="destructive" size="sm" class="rounded-full w-7 h-7 p-0 flex-shrink-0" @click="removeAudioItem(index)">
+                    <X :size="12" />
+                  </Button>
+                </div>
+                <Input v-model="item.text" placeholder="请输入该音频对应的文本内容" class="audio-text-input" />
+                <Input v-model="item.describe" placeholder="请输入该音频的描述" class="audio-text-input" />
+              </div>
+              <Button variant="outline" size="sm" @click="addAudioItem">
+                <Plus :size="14" class="mr-1" />
+                添加音频
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <DialogFooter>
+        <Button variant="outline" @click="handleCancel">{{ $t('workbench.assets.cancelBtn') }}</Button>
+        <Button @click="onConfirm">{{ $t('workbench.assets.confirmBtn') }}</Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
 import axios from "@/utils/axios";
 import projectStore from "@/stores/project";
+import Dialog from "@/components/ui/Dialog.vue";
+import DialogContent from "@/components/ui/DialogContent.vue";
+import DialogHeader from "@/components/ui/DialogHeader.vue";
+import DialogTitle from "@/components/ui/DialogTitle.vue";
+import DialogFooter from "@/components/ui/DialogFooter.vue";
+import Button from "@/components/ui/Button.vue";
+import Input from "@/components/ui/Input.vue";
+import { Plus, X } from "lucide-vue-next";
+
 const { project } = storeToRefs(projectStore());
 
 interface AudioItem {
@@ -93,10 +110,7 @@ const props = defineProps<{
 const addAssetsShow = defineModel<boolean>({
   default: false,
 });
-const rules = ref<{}>({
-  name: [{ required: true, message: $t("workbench.assets.add.nameRequired"), trigger: "blur" }],
-  describe: [{ required: true, message: $t("workbench.assets.add.describeRequired"), trigger: "blur" }],
-});
+
 function handleCancel() {
   addAssetsShow.value = false;
   // 重置音频列表
@@ -180,89 +194,78 @@ async function fileToBase64(file: File): Promise<string> {
 }
 
 function onConfirm() {
-  formRef.value?.validate().then(async (result: any) => {
-    if (result == true) {
-      const assetsItem = (
-        await Promise.all(
-          audioItems.value.map(async (item) => {
-            if (item.id != null && item.src) {
-              return {
-                id: item.id,
-                src: item.src,
-                prompt: item.text || "",
-                name: item.name || item.src.split("/").pop() || "",
-                describe: item.describe || "",
-              };
-            }
-            if (item.file) {
-              return {
-                base64: await fileToBase64(item.file),
-                prompt: item.text || "",
-                name: item.name || item.file.name,
-                describe: item.describe || "",
-              };
-            }
-            return null;
-          }),
-        )
-      ).filter(
-        (
-          item,
-        ): item is
-          | { id: number; src: string; prompt: string; name: string; describe: string }
-          | { base64: string; prompt: string; name: string; describe: string } => !!item,
-      );
+  // Simple validation
+  if (!props.formData.name?.trim()) {
+    window.$message.error($t("workbench.assets.add.nameRequired"));
+    return;
+  }
+  if (!props.formData.describe?.trim()) {
+    window.$message.error($t("workbench.assets.add.describeRequired"));
+    return;
+  }
 
-      const payload = {
-        name: props.formData.name,
-        describe: props.formData.sex + "|" + props.formData.describe,
-        projectId: project.value?.id ?? 0,
-        assetsItem,
-      };
-      console.log(props.formData.id);
-      if (props.formData.id) {
-        await axios
-          .post(`/assets/updateAudioAssets`, {
-            id: props.formData.id,
-            ...payload,
-          })
-          .then(() => {
-            window.$message.success($t("workbench.assets.add.updateSuccess"));
-            emit("getFilteredData");
-            addAssetsShow.value = false;
-          });
-      } else {
-        await axios.post(`/assets/addAudioAssets`, payload).then(() => {
-          window.$message.success($t("workbench.assets.add.addSuccess"));
+  (async () => {
+    const assetsItem = (
+      await Promise.all(
+        audioItems.value.map(async (item) => {
+          if (item.id != null && item.src) {
+            return {
+              id: item.id,
+              src: item.src,
+              prompt: item.text || "",
+              name: item.name || item.src.split("/").pop() || "",
+              describe: item.describe || "",
+            };
+          }
+          if (item.file) {
+            return {
+              base64: await fileToBase64(item.file),
+              prompt: item.text || "",
+              name: item.name || item.file.name,
+              describe: item.describe || "",
+            };
+          }
+          return null;
+        }),
+      )
+    ).filter(
+      (
+        item,
+      ): item is
+        | { id: number; src: string; prompt: string; name: string; describe: string }
+        | { base64: string; prompt: string; name: string; describe: string } => !!item,
+    );
+
+    const payload = {
+      name: props.formData.name,
+      describe: props.formData.sex + "|" + props.formData.describe,
+      projectId: project.value?.id ?? 0,
+      assetsItem,
+    };
+    console.log(props.formData.id);
+    if (props.formData.id) {
+      await axios
+        .post(`/assets/updateAudioAssets`, {
+          id: props.formData.id,
+          ...payload,
+        })
+        .then(() => {
+          window.$message.success($t("workbench.assets.add.updateSuccess"));
           emit("getFilteredData");
           addAssetsShow.value = false;
         });
-      }
+    } else {
+      await axios.post(`/assets/addAudioAssets`, payload).then(() => {
+        window.$message.success($t("workbench.assets.add.addSuccess"));
+        emit("getFilteredData");
+        addAssetsShow.value = false;
+      });
     }
-  });
+  })();
 }
 </script>
 
 <style lang="scss" scoped>
-.modalHeader {
-  background: var(--td-bg-color-container);
-  width: 100%;
-
-  :deep(.ant-typography) {
-    color: var(--td-text-color-primary);
-    margin: 0;
-  }
-
-  :deep(.ant-btn-text) {
-    color: var(--td-brand-color);
-
-    &:hover {
-      background: var(--td-bg-color-component-hover);
-      color: var(--td-brand-color-hover);
-    }
-  }
-}
-
 .data {
   width: 100%;
 }
@@ -278,9 +281,9 @@ function onConfirm() {
     flex-direction: column;
     gap: 6px;
     padding: 10px;
-    border: 1px solid var(--td-border-level-1-color);
+    border: 1px solid hsl(var(--border));
     border-radius: 6px;
-    background: var(--td-bg-color-secondarycontainer);
+    background: hsl(var(--muted) / 0.3);
 
     .audio-upload-row {
       display: flex;
@@ -293,20 +296,20 @@ function onConfirm() {
         align-items: center;
         gap: 8px;
         padding: 6px 10px;
-        border: 1px dashed var(--td-component-border);
+        border: 1px dashed hsl(var(--border));
         border-radius: 4px;
         cursor: pointer;
         min-height: 34px;
         transition: border-color 0.2s;
 
         &:hover {
-          border-color: var(--td-brand-color);
-          background: var(--td-bg-color-secondarycontainer-hover);
+          border-color: hsl(var(--primary));
+          background: hsl(var(--muted) / 0.5);
         }
 
         .audio-filename {
           font-size: 13px;
-          color: var(--td-text-color-primary);
+          color: hsl(var(--foreground));
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -314,13 +317,13 @@ function onConfirm() {
           flex: 1;
 
           &--existing {
-            color: var(--td-success-color);
+            color: hsl(var(--primary));
           }
         }
 
         .audio-upload-hint {
           font-size: 12px;
-          color: var(--td-text-color-placeholder);
+          color: hsl(var(--muted-foreground));
         }
       }
     }

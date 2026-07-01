@@ -1,31 +1,57 @@
 <template>
-  <div class="editNodel">
-    <t-dialog v-model:visible="editNodelShow" :header="$t('workbench.novel.editDialog.title')" width="50%" top="10vh" placement="center">
-      <div class="data" style="overflow-x: hidden">
-        <t-form label-width="80px">
-          <t-form-item :label="$t('workbench.novel.editDialog.chapterName')">
-            <t-input :placeholder="$t('workbench.novel.editDialog.chapterNamePh')" v-model="formData.chapter" />
-          </t-form-item>
-          <t-form-item :label="$t('workbench.novel.editDialog.eventContent')">
-            <t-textarea v-model="formData.event" :placeholder="$t('workbench.novel.editDialog.eventContentPh')"></t-textarea>
-          </t-form-item>
-          <t-form-item :label="$t('workbench.novel.editDialog.chapterContent')">
-            <t-textarea :placeholder="$t('workbench.novel.editDialog.chapterContentPh')" v-model="formData.chapterData" :autosize="{ minRows: 15, maxRows: 15 }" />
-          </t-form-item>
-        </t-form>
-      </div>
-      <template #footer>
-        <div class="editNodel-footer">
-          <t-button @click="editNodelShow = false">{{ $t('workbench.novel.editDialog.cancel') }}</t-button>
-          <t-button theme="primary" @click="saveChanges">{{ $t('workbench.novel.editDialog.save') }}</t-button>
+  <Dialog v-model:open="editNodelShow">
+    <DialogContent class="max-w-xl max-h-[85vh] flex flex-col overflow-hidden">
+      <DialogHeader>
+        <DialogTitle>{{ $t('workbench.novel.editDialog.title') }}</DialogTitle>
+      </DialogHeader>
+
+      <div class="flex-1 overflow-y-auto flex flex-col gap-4 py-2">
+        <div class="space-y-2">
+          <Label>{{ $t('workbench.novel.editDialog.chapterName') }}</Label>
+          <Input :placeholder="$t('workbench.novel.editDialog.chapterNamePh')" v-model="formData.chapter" />
         </div>
-      </template>
-    </t-dialog>
-  </div>
+        <div class="space-y-2">
+          <Label>{{ $t('workbench.novel.editDialog.eventContent') }}</Label>
+          <Textarea
+            v-model="formData.event"
+            :placeholder="$t('workbench.novel.editDialog.eventContentPh')"
+            class="min-h-[80px] resize-none"
+          />
+        </div>
+        <div class="space-y-2">
+          <Label>{{ $t('workbench.novel.editDialog.chapterContent') }}</Label>
+          <Textarea
+            :placeholder="$t('workbench.novel.editDialog.chapterContentPh')"
+            v-model="formData.chapterData"
+            class="min-h-[200px] resize-none"
+          />
+        </div>
+      </div>
+
+      <DialogFooter>
+        <Button variant="outline" @click="editNodelShow = false">
+          {{ $t('workbench.novel.editDialog.cancel') }}
+        </Button>
+        <Button @click="saveChanges">
+          {{ $t('workbench.novel.editDialog.save') }}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
 import axios from "@/utils/axios";
+import Button from "@/components/ui/Button.vue";
+import Input from "@/components/ui/Input.vue";
+import Label from "@/components/ui/Label.vue";
+import Textarea from "@/components/ui/Textarea.vue";
+import Dialog from "@/components/ui/Dialog.vue"
+import DialogContent from "@/components/ui/DialogContent.vue"
+import DialogHeader from "@/components/ui/DialogHeader.vue"
+import DialogTitle from "@/components/ui/DialogTitle.vue"
+import DialogFooter from "@/components/ui/DialogFooter.vue";
+
 const editNodelShow = defineModel<boolean>();
 const props = defineProps<{
   formData: {
@@ -40,7 +66,6 @@ const props = defineProps<{
 const emit = defineEmits(["select"]);
 
 async function saveChanges() {
-  console.log("保存的章节数据:", props.formData);
   try {
     await axios.post("/novel/updateNovel", {
       id: props.formData.id,
@@ -57,44 +82,5 @@ async function saveChanges() {
   } finally {
     editNodelShow.value = false;
   }
-  editNodelShow.value = false; // 关闭对话框
 }
 </script>
-
-<style lang="scss" scoped>
-.data {
-  :deep(.t-form__item) {
-    .t-form__controls {
-      min-width: 0;
-      overflow-x: hidden;
-    }
-  }
-
-  :deep(.t-textarea__inner) {
-    width: 100%;
-    box-sizing: border-box;
-  }
-}
-
-.event-editor {
-  width: 100%;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-
-  .event-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    min-height: 32px;
-    align-items: center;
-    overflow-x: hidden;
-  }
-
-  .event-input {
-    width: 100%;
-    min-width: 0;
-  }
-}
-</style>

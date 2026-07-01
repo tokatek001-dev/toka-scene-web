@@ -1,331 +1,154 @@
 <template>
-  <div class="addScript">
-    <t-dialog
-      v-model:visible="addScriptShow"
-      width="60vw"
-      top="5vh"
-      :header="$t('workbench.script.add.title')"
-      :closable="false"
-      :maskClosable="false">
-      <div class="data">
-        <div class="section name">
-          <span class="section-label">{{ $t("workbench.script.add.scriptName") }}</span>
-          <t-input v-model="scriptName" :placeholder="$t('workbench.script.add.scriptNamePh')" />
+  <Dialog v-model:open="addScriptShow">
+    <DialogContent class="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+      <DialogHeader>
+        <DialogTitle>{{ $t('workbench.script.add.title') }}</DialogTitle>
+      </DialogHeader>
+
+      <div class="flex-1 overflow-y-auto flex flex-col gap-5 py-2">
+        <div class="space-y-2">
+          <Label>{{ $t("workbench.script.add.scriptName") }}</Label>
+          <Input v-model="scriptName" :placeholder="$t('workbench.script.add.scriptNamePh')" />
         </div>
 
-        <div class="section upload">
-          <span class="section-label">{{ $t("workbench.script.add.uploadFile") }}</span>
-          <div class="upload-area" @click="triggerUpload" @dragover.prevent @drop.prevent="handleDrop">
-            <t-upload
-              ref="uploadRef"
-              v-model="fileList"
-              theme="file"
-              :multiple="false"
-              :max="1"
-              :before-upload="handleBeforeUpload"
-              style="display: none" />
-            <div class="dragIcon">
-              <i-upload-one theme="outline" size="32" fill="var(--td-brand-color)" />
-            </div>
-            <p class="upload-text">{{ $t("workbench.script.add.dragUpload") }}</p>
-            <p class="upload-hint">{{ $t("workbench.script.add.uploadHint") }}</p>
+        <div class="space-y-2">
+          <Label>{{ $t("workbench.script.add.uploadFile") }}</Label>
+          <div
+            class="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer transition-colors hover:border-primary"
+            @click="triggerUpload"
+            @dragover.prevent
+            @drop.prevent="handleDrop">
+            <input ref="fileInputRef" type="file" accept=".txt,.docx" class="hidden" @change="handleFileChange" />
+            <Upload :size="28" class="mx-auto mb-3 text-muted-foreground" />
+            <p class="text-sm font-medium">{{ $t("workbench.script.add.dragUpload") }}</p>
+            <p class="text-xs text-muted-foreground mt-1">{{ $t("workbench.script.add.uploadHint") }}</p>
           </div>
         </div>
 
-        <div class="section content">
-          <span class="section-label">{{ $t("workbench.script.add.scriptContent") }}</span>
-          <t-textarea
+        <div class="space-y-2">
+          <Label>{{ $t("workbench.script.add.scriptContent") }}</Label>
+          <Textarea
             v-model="scriptData"
             :placeholder="$t('workbench.script.add.scriptContentPh')"
-            name="description"
-            :autosize="{ minRows: 12, maxRows: 12 }" />
-          <div class="scriptLen">{{ scriptData.length }}/{{ otherSetting.scriptEpisodeLength }}</div>
+            class="min-h-[200px] resize-none"
+          />
+          <p class="text-xs text-right" :class="scriptData.length > otherSetting.scriptEpisodeLength ? 'text-destructive' : 'text-muted-foreground'">
+            {{ scriptData.length }}/{{ otherSetting.scriptEpisodeLength }}
+          </p>
         </div>
 
-        <div class="section assets-section">
-          <div class="assets-header">
-            <span class="section-label">{{ $t("workbench.script.add.relatedAssets") }}</span>
-            <t-button size="small" theme="primary" variant="outline" @click="handleSelectAssets">
-              <template #icon><i-plus /></template>
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <Label>{{ $t("workbench.script.add.relatedAssets") }}</Label>
+            <Button size="sm" variant="outline" @click="handleSelectAssets">
+              <Plus :size="14" class="mr-1" />
               {{ $t("workbench.script.add.selectAssets") }}
-            </t-button>
+            </Button>
           </div>
-          <div class="assets-list" v-if="selectedAssets.length">
-            <t-tag v-for="asset in selectedAssets" :key="asset.id" closable variant="light-outline" @close="removeAsset(asset.id)">
+          <div v-if="selectedAssets.length" class="flex flex-wrap gap-2">
+            <Badge
+              v-for="asset in selectedAssets"
+              :key="asset.id"
+              variant="secondary"
+              class="gap-1 cursor-pointer"
+              @click="removeAsset(asset.id)">
               {{ asset.name }}
-            </t-tag>
+              <X :size="12" />
+            </Badge>
           </div>
-          <div v-else class="assets-empty">{{ $t("workbench.script.add.noAssets") }}</div>
+          <p v-else class="text-sm text-muted-foreground">{{ $t("workbench.script.add.noAssets") }}</p>
         </div>
       </div>
-      <template #footer>
-        <div class="dialog-footer">
-          <t-button theme="default" @click="handleCancel">{{ $t("workbench.script.add.cancel") }}</t-button>
-          <t-button theme="primary" :loading="keepLoading" :disabled="scriptData.length > otherSetting.scriptEpisodeLength" @click="handleConfirm">
-            {{ $t("workbench.script.add.confirm") }}
-          </t-button>
-        </div>
-      </template>
-    </t-dialog>
-  </div>
+
+      <DialogFooter>
+        <Button variant="outline" @click="handleCancel">{{ $t("workbench.script.add.cancel") }}</Button>
+        <Button :disabled="scriptData.length > otherSetting.scriptEpisodeLength" @click="handleConfirm">
+          {{ $t("workbench.script.add.confirm") }}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
-import { LoadingPlugin } from "tdesign-vue-next";
 import mammoth from "mammoth";
-import type { UploadFile } from "tdesign-vue-next";
 import axios from "@/utils/axios";
 import projectStore from "@/stores/project";
 import openAssetsSelector from "@/utils/assetsCheck";
 import settingStore from "@/stores/setting";
+import Button from "@/components/ui/Button.vue";
+import Input from "@/components/ui/Input.vue";
+import Label from "@/components/ui/Label.vue";
+import Textarea from "@/components/ui/Textarea.vue";
+import Badge from "@/components/ui/Badge.vue";
+import Dialog from "@/components/ui/Dialog.vue"
+import DialogContent from "@/components/ui/DialogContent.vue"
+import DialogHeader from "@/components/ui/DialogHeader.vue"
+import DialogTitle from "@/components/ui/DialogTitle.vue"
+import DialogFooter from "@/components/ui/DialogFooter.vue";
+import { Plus, Upload, X } from "lucide-vue-next";
+
 const { otherSetting } = storeToRefs(settingStore());
 const { project } = storeToRefs(projectStore());
 
-const addScriptShow = defineModel<boolean>({
-  default: false,
-});
+const addScriptShow = defineModel<boolean>({ default: false });
 
-const uploadRef = ref<any>(null);
-const content = ref<string>("");
-const fileList = ref<UploadFile[]>([]);
-const scriptData = ref<string>("");
-
+const fileInputRef = ref<HTMLInputElement | null>(null);
+const scriptData = ref("");
+const scriptName = ref("");
 const keepLoading = ref(false);
 
-// 触发上传
-function triggerUpload(): void {
-  uploadRef.value?.triggerUpload();
-}
-// 读取文件内容
-async function readFile(file: File): Promise<string> {
-  const buffer = await file.arrayBuffer();
-  if (file.type === "text/plain") {
-    return new TextDecoder().decode(buffer);
-  }
-  const result = await mammoth.extractRawText({ arrayBuffer: buffer });
-  return result.value;
-}
-// 上传前校验并解析
-async function handleBeforeUpload(file: UploadFile): Promise<boolean> {
-  const rawFile = file.raw;
-  if (!rawFile) {
-    window.$message.error($t("workbench.script.add.msg.fileReadFailed"));
-    return false;
-  }
-
-  const allowTypes = ["text/plain", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
-
-  if (rawFile.type === "application/msword") {
-    window.$message.warning($t("workbench.script.add.msg.docNotSupported"));
-    fileList.value = [];
-    return false;
-  }
-  if (!allowTypes.includes(rawFile.type)) {
-    window.$message.error($t("workbench.script.add.msg.unsupportedType"));
-    fileList.value = [];
-    return false;
-  }
-  if (rawFile.size > 10 * 1024 * 1024) {
-    window.$message.error($t("workbench.script.add.msg.fileTooLarge"));
-    fileList.value = [];
-    return false;
-  }
-
-  const loader = LoadingPlugin({
-    fullscreen: true,
-    attach: "body",
-    text: $t("workbench.script.add.msg.parsing"),
-  });
-  try {
-    content.value = await readFile(rawFile);
-    scriptData.value = content.value;
-  } catch (error) {
-    console.error("文件解析失败:", error);
-    window.$message.error($t("workbench.script.add.msg.parseFailed"));
-    fileList.value = [];
-  } finally {
-    loader.hide();
-  }
-  return false;
-}
-// 处理拖拽上传
-async function handleDrop(e: DragEvent): Promise<void> {
-  const files = e.dataTransfer?.files;
-  if (files && files.length > 0) {
-    fileList.value = [];
-    const file = files[0];
-    await handleBeforeUpload({ raw: file } as UploadFile);
-  }
-}
-// ============== Assets ==============
-interface SelectedAsset {
-  id: number;
-  name: string;
-}
+interface SelectedAsset { id: number; name: string; }
 const selectedAssets = ref<SelectedAsset[]>([]);
+
+function triggerUpload() { fileInputRef.value?.click(); }
+
+async function handleFileChange(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0];
+  if (file) await processFile(file);
+}
+
+async function handleDrop(e: DragEvent) {
+  const file = e.dataTransfer?.files?.[0];
+  if (file) await processFile(file);
+}
+
+async function processFile(rawFile: File) {
+  const allowTypes = ["text/plain", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+  if (rawFile.type === "application/msword") { window.$message.warning($t("workbench.script.add.msg.docNotSupported")); return; }
+  if (!allowTypes.includes(rawFile.type)) { window.$message.error($t("workbench.script.add.msg.unsupportedType")); return; }
+  if (rawFile.size > 10 * 1024 * 1024) { window.$message.error($t("workbench.script.add.msg.fileTooLarge")); return; }
+  try {
+    const buffer = await rawFile.arrayBuffer();
+    scriptData.value = rawFile.type === "text/plain"
+      ? new TextDecoder().decode(buffer)
+      : (await mammoth.extractRawText({ arrayBuffer: buffer })).value;
+  } catch { window.$message.error($t("workbench.script.add.msg.parseFailed")); }
+}
 
 async function handleSelectAssets() {
   const assets = await openAssetsSelector({ title: $t("workbench.script.add.msg.selectAssetsTitle"), types: ["role", "tool", "scene"] });
   if (assets.length) {
     const existing = new Set(selectedAssets.value.map((a) => a.id));
-    for (const a of assets) {
-      if (!existing.has(a.id)) {
-        selectedAssets.value.push({ id: a.id, name: a.name });
-      }
-    }
+    for (const a of assets) { if (!existing.has(a.id)) selectedAssets.value.push({ id: a.id, name: a.name }); }
   }
 }
 
-function removeAsset(id: number) {
-  selectedAssets.value = selectedAssets.value.filter((a) => a.id !== id);
-}
+function removeAsset(id: number) { selectedAssets.value = selectedAssets.value.filter((a) => a.id !== id); }
 
-function handleCancel(): void {
-  addScriptShow.value = false;
-  scriptData.value = "";
-  content.value = "";
-  fileList.value = [];
-  selectedAssets.value = [];
-}
-function closeWin(): void {
-  scriptData.value = "";
-  content.value = "";
-  fileList.value = [];
-  selectedAssets.value = [];
-  addScriptShow.value = false;
-}
+function handleCancel() { addScriptShow.value = false; scriptData.value = ""; scriptName.value = ""; selectedAssets.value = []; }
+
 const emit = defineEmits(["searchScripts"]);
-async function handleConfirm(): Promise<void> {
-  if (!scriptData.value.trim()) {
-    window.$message.warning($t("workbench.script.add.msg.enterContent"));
-    return;
-  }
-  if (!scriptName.value.trim()) {
-    window.$message.warning($t("workbench.script.add.msg.enterName"));
-    return;
-  }
+
+async function handleConfirm() {
+  if (!scriptData.value.trim()) { window.$message.warning($t("workbench.script.add.msg.enterContent")); return; }
+  if (!scriptName.value.trim()) { window.$message.warning($t("workbench.script.add.msg.enterName")); return; }
   keepLoading.value = true;
   try {
-    await axios.post("/script/addScript", {
-      name: scriptName.value,
-      content: scriptData.value,
-      projectId: project.value?.id,
-      assets: selectedAssets.value.map((a) => a.id),
-    });
+    await axios.post("/script/addScript", { name: scriptName.value, content: scriptData.value, projectId: project.value?.id, assets: selectedAssets.value.map((a) => a.id) });
     window.$message.success($t("workbench.script.add.msg.addSuccess"));
-    closeWin();
-    emit("searchScripts");
-  } catch (error) {
-    console.error("添加剧本失败:", error);
-    window.$message.error((error as any).message ?? $t("workbench.script.add.msg.addFailed"));
-  } finally {
-    keepLoading.value = false;
-  }
+    handleCancel(); emit("searchScripts");
+  } catch (error) { window.$message.error((error as any).message ?? $t("workbench.script.add.msg.addFailed")); }
+  finally { keepLoading.value = false; }
 }
-const scriptName = ref<string>("");
 </script>
-
-<style lang="scss" scoped>
-$line-height: 28px;
-
-.addScript {
-  .titHeader {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 64px;
-    width: 100%;
-
-    .titleWrapper {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      .title {
-        font-weight: 600;
-        font-size: 18px;
-      }
-    }
-  }
-
-  .data {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-
-    .section {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      .scriptLen {
-        text-align: right;
-        color: #aaa;
-      }
-    }
-
-    .section-label {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--td-text-color-primary);
-    }
-
-    .upload {
-      .upload-area {
-        padding: 32px 20px;
-        border: 2px dashed var(--td-component-border);
-        border-radius: 8px;
-        text-align: center;
-        cursor: pointer;
-        transition: all 0.2s;
-        &:hover {
-          background-color: var(--td-bg-color-secondarycontainer-hover);
-          border-color: var(--td-brand-color);
-        }
-
-        .dragIcon {
-          margin-bottom: 12px;
-        }
-
-        .upload-text {
-          font-size: 14px;
-          margin: 0 0 8px;
-        }
-
-        .upload-hint {
-          font-size: 12px;
-          margin: 0;
-          color: var(--td-text-color-placeholder);
-        }
-      }
-    }
-
-    .assets-section {
-      .assets-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-      }
-      .assets-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-      }
-      .assets-empty {
-        font-size: 13px;
-        color: var(--td-text-color-placeholder);
-      }
-    }
-
-    .content {
-      width: 100%;
-      overflow: auto;
-    }
-  }
-
-  .dialog-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    padding: 16px 0 0;
-  }
-}
-</style>

@@ -1,41 +1,58 @@
 <template>
   <div class="addAssets">
-    <t-dialog
-      v-model:visible="addAssetsShow"
-      :closable="false"
-      width="40vw"
-      :header="props.title"
-      :maskClosable="false"
-      @close-btn-click="handleCancel"
-      @confirm="onConfirm"
-      @cancel="handleCancel">
-      <div class="data">
-        <t-form :data="props.formData" :rules="rules" ref="formRef">
-          <t-form-item :label="$t('workbench.assets.add.name')" name="name">
-            <t-input v-model="props.formData.name" :placeholder="$t('workbench.assets.add.namePh')"></t-input>
-          </t-form-item>
-          <t-form-item :label="$t('workbench.assets.add.describe')" name="describe">
-            <t-textarea v-model="props.formData.describe" :placeholder="$t('workbench.assets.add.describePh')"></t-textarea>
-          </t-form-item>
-          <t-form-item :label="$t('workbench.assets.add.remark')" name="remark">
-            <t-input v-model="props.formData.remark" :placeholder="$t('workbench.assets.add.remarkPh')"></t-input>
-          </t-form-item>
-          <t-form-item :label="$t('workbench.assets.add.prompt')" name="prompt" v-if="props.type !== 'clip'">
-            <t-textarea
-              v-model="props.formData.prompt"
-              :autosize="{ minRows: 3, maxRows: 5 }"
-              :placeholder="$t('workbench.assets.add.promptPh')"></t-textarea>
-          </t-form-item>
-        </t-form>
-      </div>
-    </t-dialog>
+    <Dialog :open="addAssetsShow" @update:open="(v) => { if (!v) handleCancel() }">
+      <DialogContent class="max-w-[40vw]">
+        <DialogHeader>
+          <DialogTitle>{{ props.title }}</DialogTitle>
+        </DialogHeader>
+        <div class="data">
+          <div class="space-y-4">
+            <div class="space-y-2">
+              <label class="text-sm font-medium">{{ $t('workbench.assets.add.name') }}</label>
+              <Input v-model="props.formData.name" :placeholder="$t('workbench.assets.add.namePh')" />
+            </div>
+            <div class="space-y-2">
+              <label class="text-sm font-medium">{{ $t('workbench.assets.add.describe') }}</label>
+              <textarea
+                v-model="props.formData.describe"
+                :placeholder="$t('workbench.assets.add.describePh')"
+                class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" />
+            </div>
+            <div class="space-y-2">
+              <label class="text-sm font-medium">{{ $t('workbench.assets.add.remark') }}</label>
+              <Input v-model="props.formData.remark" :placeholder="$t('workbench.assets.add.remarkPh')" />
+            </div>
+            <div v-if="props.type !== 'clip'" class="space-y-2">
+              <label class="text-sm font-medium">{{ $t('workbench.assets.add.prompt') }}</label>
+              <textarea
+                v-model="props.formData.prompt"
+                :placeholder="$t('workbench.assets.add.promptPh')"
+                class="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" />
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" @click="handleCancel">{{ $t('workbench.assets.cancelBtn') }}</Button>
+          <Button @click="onConfirm">{{ $t('workbench.assets.confirmBtn') }}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import axios from "@/utils/axios";
 import projectStore from "@/stores/project";
+import Dialog from "@/components/ui/Dialog.vue";
+import DialogContent from "@/components/ui/DialogContent.vue";
+import DialogHeader from "@/components/ui/DialogHeader.vue";
+import DialogTitle from "@/components/ui/DialogTitle.vue";
+import DialogFooter from "@/components/ui/DialogFooter.vue";
+import Button from "@/components/ui/Button.vue";
+import Input from "@/components/ui/Input.vue";
+
 const { project } = storeToRefs(projectStore());
+
 const props = defineProps<{
   type: "role" | "tool" | "scene" | "clip" | "audio";
   title: string;
@@ -47,75 +64,63 @@ const props = defineProps<{
     prompt: string;
   };
 }>();
+
 const addAssetsShow = defineModel<boolean>({
   default: false,
 });
-const rules = ref<{}>({
-  name: [{ required: true, message: $t("workbench.assets.add.nameRequired"), trigger: "blur" }],
-  describe: [{ required: true, message: $t("workbench.assets.add.describeRequired"), trigger: "blur" }],
-});
+
 function handleCancel() {
   addAssetsShow.value = false;
 }
-const formRef = ref();
+
 const emit = defineEmits(["getFilteredData"]);
+
 function onConfirm() {
-  formRef.value?.validate().then(async (result: any) => {
-    if (result == true) {
-      if (props.formData.id !== 0) {
-        await axios
-          .post(`/assets/updateAssets`, {
-            id: props.formData.id,
-            name: props.formData.name,
-            describe: props.formData.describe,
-            remark: props.formData.remark,
-            prompt: props.formData.prompt,
-          })
-          .then(() => {
-            window.$message.success($t("workbench.assets.add.updateSuccess"));
-            emit("getFilteredData");
-            addAssetsShow.value = false;
-          });
-      } else {
-        await axios
-          .post(`/assets/addAssets`, {
-            name: props.formData.name,
-            describe: props.formData.describe,
-            remark: props.formData.remark,
-            type: props.type,
-            projectId: project.value?.id,
-            prompt: props.formData.prompt,
-          })
-          .then(() => {
-            window.$message.success($t("workbench.assets.add.addSuccess"));
-            emit("getFilteredData");
-            addAssetsShow.value = false;
-          });
-      }
-    }
-  });
+  // Simple validation
+  if (!props.formData.name?.trim()) {
+    window.$message.error($t("workbench.assets.add.nameRequired"));
+    return;
+  }
+  if (!props.formData.describe?.trim()) {
+    window.$message.error($t("workbench.assets.add.describeRequired"));
+    return;
+  }
+
+  if (props.formData.id !== 0) {
+    axios
+      .post(`/assets/updateAssets`, {
+        id: props.formData.id,
+        name: props.formData.name,
+        describe: props.formData.describe,
+        remark: props.formData.remark,
+        prompt: props.formData.prompt,
+      })
+      .then(() => {
+        window.$message.success($t("workbench.assets.add.updateSuccess"));
+        emit("getFilteredData");
+        addAssetsShow.value = false;
+      });
+  } else {
+    axios
+      .post(`/assets/addAssets`, {
+        name: props.formData.name,
+        describe: props.formData.describe,
+        remark: props.formData.remark,
+        type: props.type,
+        projectId: project.value?.id,
+        prompt: props.formData.prompt,
+      })
+      .then(() => {
+        window.$message.success($t("workbench.assets.add.addSuccess"));
+        emit("getFilteredData");
+        addAssetsShow.value = false;
+      });
+  }
 }
 </script>
 
 <style lang="scss" scoped>
 .addAssets {
-  .modalHeader {
-    background: var(--td-bg-color-container);
-    width: 100%;
-    :deep(.ant-typography) {
-      color: var(--td-text-color-primary);
-      margin: 0;
-    }
-
-    :deep(.ant-btn-text) {
-      color: var(--td-brand-color);
-
-      &:hover {
-        background: var(--td-bg-color-component-hover);
-        color: var(--td-brand-color-hover);
-      }
-    }
-  }
   .data {
     width: 100%;
   }

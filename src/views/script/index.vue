@@ -1,72 +1,96 @@
 <template>
-  <div class="script">
-    <div class="actionBar w">
-      <div class="actionBar-left f ac">
-        <t-input :placeholder="$t('workbench.script.searchPlaceholder')" v-model="searchQuery" class="searchInput" clearable style="width: 300px" />
-        <t-button theme="primary" @click="onChange">
-          <template #icon><i-search /></template>
-          {{ $t("workbench.script.search") }}
-        </t-button>
-        <t-button theme="primary" @click="handleAddScript">
-          <template #icon><i-plus /></template>
-          {{ $t("workbench.script.addScript") }}
-        </t-button>
-        <t-button theme="primary" @click="handleBatchAddScript">
-          <template #icon><i-plus /></template>
-          {{ $t("workbench.script.batchAddScript") }}
-        </t-button>
-      </div>
-      <div class="actionBar-right f ac w" v-if="scripts.length">
-        <t-button :theme="isAllSelected ? 'default' : 'primary'" variant="outline" @click="toggleSelectAll(!isAllSelected)">
-          {{ isAllSelected ? $t("workbench.script.cancelSelectAll") : $t("workbench.script.selectAll") }}
-        </t-button>
-        <t-button theme="primary" @click="handleExportScript" :disabled="selectedIds.length === 0">
-          <template #icon><i-export /></template>
-          {{ $t("workbench.script.exportScript") }}{{ selectedIds.length ? `(${selectedIds.length})` : "" }}
-        </t-button>
-        <t-button theme="primary" @click="handleExtractAssets" :loading="scriptLoad" :disabled="selectedIds.length === 0">
-          <template #icon><i-export /></template>
-          {{ $t("workbench.script.extractAssets") }}{{ selectedIds.length ? `(${selectedIds.length})` : "" }}
-        </t-button>
-        <t-button theme="primary" @click="handleBatchDelete" :disabled="selectedIds.length === 0">
-          <template #icon><i-delete /></template>
-          {{ $t("workbench.script.deleteScript") }}{{ selectedIds.length ? `(${selectedIds.length})` : "" }}
-        </t-button>
-      </div>
-    </div>
-    <div class="contentArea">
-      <div v-if="scripts.length === 0" class="emptyState">
-        <t-empty />
-      </div>
-      <div v-else class="scriptsList f w">
-        <div v-for="(item, index) in scripts" :key="index" @click="handleScriptClick(item)" class="scriptCard">
-          <t-card shadow hover-shadow :style="{ width: '400px', cursor: 'pointer' }">
-            <template #header>
-              <div class="cardHeader">
-                <span class="cardTitle">{{ item.name }}</span>
-                <t-checkbox :checked="selectedIds.includes(item.id)" @click.stop @change="toggleSelect(item.id)" class="cardCheckbox" />
-              </div>
-            </template>
-            <span class="content">{{ item.content }}</span>
-
-            <t-loading v-if="item?.extractState == 0" :text="$t('workbench.script.msg.extracting')" size="small"></t-loading>
-            <t-loading v-if="item?.extractState == 2" :text="$t('workbench.script.msg.waitExtract')" size="small"></t-loading>
-            <t-tooltip :content="item.errorReason" v-if="item?.extractState == -1" theme="light">
-              <t-tag theme="danger" size="small">{{ $t("workbench.script.msg.extractFailed") }}</t-tag>
-            </t-tooltip>
-            <div class="assetTags" v-else-if="item.relatedAssets?.length" @click.stop>
-              <t-tag v-for="asset in item.relatedAssets" :key="asset.id" variant="light-outline" size="small">
-                {{ asset.name }}
-              </t-tag>
-            </div>
-
-            <div class="del">
-              <i-delete theme="outline" size="18" @click.stop="handleDeleteScript(item.id)" style="cursor: pointer" />
-            </div>
-          </t-card>
+  <div class="script flex flex-col h-full px-4 pb-4">
+    <!-- Action Bar -->
+    <div class="flex items-center justify-between gap-3 mt-5 mb-6 flex-wrap">
+      <div class="flex items-center gap-2 flex-wrap">
+        <div class="relative">
+          <Search :size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input :placeholder="$t('workbench.script.searchPlaceholder')" v-model="searchQuery" class="pl-9 w-64" />
         </div>
+        <Button variant="outline" @click="onChange">{{ $t("workbench.script.search") }}</Button>
+        <Button @click="handleAddScript">
+          <Plus :size="16" class="mr-2" />{{ $t("workbench.script.addScript") }}
+        </Button>
+        <Button variant="outline" @click="handleBatchAddScript">
+          <Plus :size="16" class="mr-2" />{{ $t("workbench.script.batchAddScript") }}
+        </Button>
+      </div>
+      <div v-if="scripts.length" class="flex items-center gap-2 flex-wrap">
+        <Button :variant="isAllSelected ? 'secondary' : 'outline'" size="sm" @click="toggleSelectAll(!isAllSelected)">
+          {{ isAllSelected ? $t("workbench.script.cancelSelectAll") : $t("workbench.script.selectAll") }}
+        </Button>
+        <Button size="sm" variant="outline" :disabled="selectedIds.length === 0" @click="handleExportScript">
+          <Download :size="14" class="mr-1" />
+          {{ $t("workbench.script.exportScript") }}{{ selectedIds.length ? `(${selectedIds.length})` : "" }}
+        </Button>
+        <Button size="sm" variant="outline" :disabled="selectedIds.length === 0" @click="handleExtractAssets">
+          <Layers :size="14" class="mr-1" />
+          {{ $t("workbench.script.extractAssets") }}{{ selectedIds.length ? `(${selectedIds.length})` : "" }}
+        </Button>
+        <Button size="sm" variant="destructive" :disabled="selectedIds.length === 0" @click="handleBatchDelete">
+          <Trash2 :size="14" class="mr-1" />
+          {{ $t("workbench.script.deleteScript") }}{{ selectedIds.length ? `(${selectedIds.length})` : "" }}
+        </Button>
       </div>
     </div>
+
+    <!-- Content -->
+    <div class="flex-1 overflow-y-auto">
+      <div v-if="scripts.length === 0" class="flex flex-col items-center justify-center h-64 text-muted-foreground">
+        <FileText :size="48" class="mb-4 opacity-30" />
+        <p class="text-sm">{{ $t("workbench.script.empty") }}</p>
+      </div>
+      <div v-else class="flex flex-wrap gap-5">
+        <Card
+          v-for="(item, index) in scripts"
+          :key="item.id"
+          class="w-96 cursor-pointer hover:shadow-lg transition-shadow"
+          @click="handleScriptClick(item)">
+          <CardHeader class="pb-2">
+            <div class="flex items-center justify-between">
+              <CardTitle class="text-base font-semibold truncate flex-1">{{ item.name }}</CardTitle>
+              <Checkbox
+                :checked="selectedIds.includes(item.id)"
+                @click.stop
+                @update:checked="() => toggleSelect(item.id)"
+                class="ml-3 shrink-0"
+              />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p class="text-sm text-muted-foreground line-clamp-2">{{ item.content }}</p>
+
+            <div v-if="item.extractState === 0" class="flex items-center gap-1 mt-2">
+              <svg class="animate-spin h-3 w-3 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              </svg>
+              <span class="text-xs text-muted-foreground">{{ $t('workbench.script.msg.extracting') }}</span>
+            </div>
+            <div v-else-if="item.extractState === 2" class="flex items-center gap-1 mt-2">
+              <svg class="animate-spin h-3 w-3 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              </svg>
+              <span class="text-xs text-muted-foreground">{{ $t('workbench.script.msg.waitExtract') }}</span>
+            </div>
+            <Badge v-else-if="item.extractState === -1" variant="destructive" class="mt-2 text-xs">
+              {{ $t("workbench.script.msg.extractFailed") }}
+            </Badge>
+            <div v-else-if="item.relatedAssets?.length" class="flex flex-wrap gap-1 mt-2" @click.stop>
+              <Badge v-for="asset in item.relatedAssets" :key="asset.id" variant="secondary" class="text-xs">
+                {{ asset.name }}
+              </Badge>
+            </div>
+
+            <div class="flex justify-end mt-2">
+              <Button size="icon" variant="ghost" @click.stop="handleDeleteScript(item.id)">
+                <Trash2 :size="16" class="text-muted-foreground hover:text-destructive" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+
     <editScript v-model="detailsShow" :item="selectedScript" @searchScripts="searchScripts" />
     <addScript v-model="addScriptShow" @searchScripts="searchScripts" />
     <batchAddScript v-model="batchScriptShow" @select="searchScripts" />
@@ -81,27 +105,23 @@ import batchAddScript from "./components/batchAddScript.vue";
 import projectStore from "@/stores/project";
 import settingStore from "@/stores/setting";
 import imageListCacheStore from "@/stores/imageListCache";
+import Button from "@/components/ui/Button.vue";
+import Input from "@/components/ui/Input.vue";
+import Card from "@/components/ui/Card.vue"
+import CardHeader from "@/components/ui/CardHeader.vue"
+import CardTitle from "@/components/ui/CardTitle.vue"
+import CardContent from "@/components/ui/CardContent.vue";
+import Badge from "@/components/ui/Badge.vue";
+import Checkbox from "@/components/ui/Checkbox.vue";
+import { Plus, Trash2, Search, Download, Layers, FileText } from "lucide-vue-next";
 
 const { clearScriptCache } = imageListCacheStore();
-
 const { otherSetting } = storeToRefs(settingStore());
 const { project } = storeToRefs(projectStore());
-interface ScriptAsset {
-  id: number;
-  name: string;
-  describe: string;
-  prompt: string;
-  type: "role" | "tool" | "scene" | "clip";
-}
-interface Script {
-  id: number;
-  name: string;
-  content: string;
-  createTime?: number;
-  extractState?: -1 | 0 | 1 | 2; // -1 失败 0 正在提取 1 成功 等待提取
-  errorReason?: string;
-  relatedAssets?: ScriptAsset[];
-}
+
+interface ScriptAsset { id: number; name: string; describe: string; prompt: string; type: "role" | "tool" | "scene" | "clip"; }
+interface Script { id: number; name: string; content: string; createTime?: number; extractState?: -1 | 0 | 1 | 2; errorReason?: string; relatedAssets?: ScriptAsset[]; }
+
 const scripts = ref<Script[]>([]);
 const searchQuery = ref("");
 const addScriptShow = ref(false);
@@ -109,84 +129,49 @@ const selectedIds = ref<number[]>([]);
 const scriptLoad = ref(false);
 const batchScriptShow = ref(false);
 const isAllSelected = computed(() => scripts.value.length > 0 && selectedIds.value.length === scripts.value.length);
+
 function toggleSelect(id: number) {
   const idx = selectedIds.value.indexOf(id);
-  if (idx === -1) {
-    selectedIds.value.push(id);
-  } else {
-    selectedIds.value.splice(idx, 1);
-  }
+  if (idx === -1) selectedIds.value.push(id);
+  else selectedIds.value.splice(idx, 1);
+}
+function toggleSelectAll(checked: boolean) {
+  selectedIds.value = checked ? scripts.value.map((s) => s.id) : [];
 }
 
-function toggleSelectAll(checked: boolean) {
-  if (checked) {
-    selectedIds.value = scripts.value.map((s) => s.id);
-  } else {
-    selectedIds.value = [];
-  }
-}
-// 搜索剧本
 async function searchScripts() {
   try {
-    const res = await axios.post("/script/getScrptApi", {
-      projectId: project.value?.id,
-      name: searchQuery.value,
-    });
+    const res = await axios.post("/script/getScrptApi", { projectId: project.value?.id, name: searchQuery.value });
     scripts.value = res.data;
   } catch (error) {
-    console.error("搜索剧本失败:", error);
     window.$message.error($t("workbench.script.msg.searchFailed"));
   }
 }
 onMounted(searchScripts);
-// 搜索输入变化
-function onChange() {
-  searchScripts();
-}
-// 新增剧本
-function handleAddScript() {
-  addScriptShow.value = true;
-}
-function handleBatchAddScript() {
-  batchScriptShow.value = true;
-}
-//导出剧本
+
+function onChange() { searchScripts(); }
+function handleAddScript() { addScriptShow.value = true; }
+function handleBatchAddScript() { batchScriptShow.value = true; }
+
 async function handleExportScript() {
-  if (!selectedIds.value.length) {
-    window.$message.warning($t("workbench.script.msg.selectsExport"));
-    return;
-  }
+  if (!selectedIds.value.length) { window.$message.warning($t("workbench.script.msg.selectsExport")); return; }
   try {
     const res = await axios.post("/script/exportScript", { id: selectedIds.value }, { responseType: "blob" });
     const blob = new Blob([res as any], { type: "application/zip" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.href = url;
-    link.download = `script_${new Date().toISOString().slice(0, 10)}.zip`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    link.href = url; link.download = `script_${new Date().toISOString().slice(0, 10)}.zip`;
+    document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
     window.$message.success($t("workbench.script.msg.exportSuccess"));
-  } catch (error) {
-    console.error("导出剧本失败:", error);
-    window.$message.error((error as Error).message ?? $t("workbench.script.msg.exportFailed"));
-  }
+  } catch (error) { window.$message.error((error as Error).message ?? $t("workbench.script.msg.exportFailed")); }
 }
-const selectedScript = ref<Script>({
-  id: 0,
-  name: "",
-  content: "",
-});
+
+const selectedScript = ref<Script>({ id: 0, name: "", content: "" });
 const detailsShow = ref(false);
-// 点击剧本卡片
-function handleScriptClick(item: Script) {
-  selectedScript.value = { ...item };
-  detailsShow.value = true;
-}
-// 删除剧本
+
+function handleScriptClick(item: Script) { selectedScript.value = { ...item }; detailsShow.value = true; }
+
 async function handleDeleteScript(scriptId: number) {
-  //判断是否有资产正在提取中
   const dialog = DialogPlugin.confirm({
     header: $t("workbench.script.msg.deleteHeader"),
     body: $t("workbench.script.msg.deleteBody"),
@@ -199,50 +184,28 @@ async function handleDeleteScript(scriptId: number) {
         window.$message.success($t("workbench.script.msg.deleteSuccess"));
         clearScriptCache(project.value!.id, scriptId);
         searchScripts();
-        dialog.destroy();
-
         selectedIds.value = selectedIds.value.filter((i) => i !== scriptId);
-      } catch (error) {
-        console.error("删除剧本失败:", error);
-        window.$message.error($t("workbench.script.msg.deleteFailed"));
-        dialog.destroy();
-      }
+      } catch { window.$message.error($t("workbench.script.msg.deleteFailed")); }
+      finally { dialog.destroy(); }
     },
-    onClose: () => {
-      dialog.destroy();
-    },
+    onClose: () => { dialog.destroy(); },
   });
 }
-//提取资产
+
 async function handleExtractAssets() {
   if (!project.value) return window.$message.error($t("workbench.script.msg.projectNotFound"));
-  //判断是否有资产正在提取中
   scriptLoad.value = true;
   try {
-    await axios.post("/script/extractAssets", {
-      scriptIds: selectedIds.value,
-      projectId: project.value!.id,
-      groupSize: otherSetting.value.assetsBatchGenereateSize,
-    });
-    searchScripts();
-    selectedIds.value = [];
-  } catch (e) {
-    window.$message.error((e as any)?.message || $t("workbench.script.msg.extractFailed"));
-  } finally {
-    scriptLoad.value = false;
-  }
+    await axios.post("/script/extractAssets", { scriptIds: selectedIds.value, projectId: project.value!.id, groupSize: otherSetting.value.assetsBatchGenereateSize });
+    searchScripts(); selectedIds.value = [];
+  } catch (e) { window.$message.error((e as any)?.message || $t("workbench.script.msg.extractFailed")); }
+  finally { scriptLoad.value = false; }
 }
-//批量删除剧本
+
 async function handleBatchDelete() {
-  if (!selectedIds.value.length) {
-    window.$message.warning($t("workbench.script.msg.selectDelScript"));
-    return;
-  }
-  //判断是否有资产正在提取中
+  if (!selectedIds.value.length) { window.$message.warning($t("workbench.script.msg.selectDelScript")); return; }
   const extractingIds = new Set(notCompletedData.value.map((s) => s.id));
-  if (selectedIds.value.some((id) => extractingIds.has(id))) {
-    return window.$message.error($t("workbench.script.msg.extractingInProgress"));
-  }
+  if (selectedIds.value.some((id) => extractingIds.has(id))) return window.$message.error($t("workbench.script.msg.extractingInProgress"));
   const dialog = DialogPlugin.confirm({
     header: $t("workbench.script.msg.batchDeleteHeader"),
     body: $t("workbench.script.msg.batchDeleteBody", { count: selectedIds.value.length }),
@@ -253,167 +216,36 @@ async function handleBatchDelete() {
       try {
         await axios.post("/script/delScript", { ids: selectedIds.value });
         window.$message.success($t("workbench.script.msg.batchDeleteSuccess"));
-        for (const item of selectedIds.value) {
-          clearScriptCache(project.value!.id, item);
-        }
+        for (const item of selectedIds.value) clearScriptCache(project.value!.id, item);
         searchScripts();
-        dialog.destroy();
-      } catch (error) {
-        console.error("删除剧本失败:", error);
-        window.$message.error($t("workbench.script.msg.deleteFailed"));
-        dialog.destroy();
-      } finally {
-        selectedIds.value = [];
-      }
+      } catch { window.$message.error($t("workbench.script.msg.deleteFailed")); }
+      finally { selectedIds.value = []; dialog.destroy(); }
     },
-    onClose: () => {
-      dialog.destroy();
-    },
+    onClose: () => { dialog.destroy(); },
   });
 }
 
+const notCompletedData = computed(() => scripts.value.filter((s) => s.extractState == 0));
 let pollingTimer: ReturnType<typeof setInterval> | null = null;
-
-function startPolling() {
-  if (pollingTimer) return;
-  pollingTimer = setInterval(async () => {
-    if (notCompletedData.value.length === 0) {
-      stopPolling();
-      return;
-    }
-    await pollScriptAssets();
-  }, 3000);
-}
-
-function stopPolling() {
-  if (pollingTimer) {
-    clearInterval(pollingTimer);
-    pollingTimer = null;
-  }
-}
-const notCompletedData = computed(() => {
-  return scripts.value.filter((s) => s.extractState == 0);
-});
-// 轮询相关
 
 async function pollScriptAssets() {
   if (notCompletedData.value.length === 0) return;
   const ids = notCompletedData.value.map((item) => item.id);
   try {
     const { data } = await axios.post("/script/pollScriptAssets", { ids });
-    if (data.length) {
-      searchScripts();
-    }
-  } catch (e) {
-    console.error("轮询事件状态失败:", e);
-  }
+    if (data.length) searchScripts();
+  } catch (e) { console.error("轮询事件状态失败:", e); }
 }
-watch(
-  () => notCompletedData.value,
-  (newVal) => {
-    if (newVal.length > 0) {
-      startPolling();
-    } else {
-      stopPolling();
-    }
-  },
-);
-onUnmounted(() => {
-  stopPolling();
-});
+
+function startPolling() {
+  if (pollingTimer) return;
+  pollingTimer = setInterval(async () => {
+    if (notCompletedData.value.length === 0) { stopPolling(); return; }
+    await pollScriptAssets();
+  }, 3000);
+}
+function stopPolling() { if (pollingTimer) { clearInterval(pollingTimer); pollingTimer = null; } }
+
+watch(() => notCompletedData.value, (newVal) => { if (newVal.length > 0) startPolling(); else stopPolling(); });
+onUnmounted(() => { stopPolling(); });
 </script>
-
-<style lang="scss" scoped>
-.script {
-  .smHead {
-    margin-bottom: 32px;
-  }
-  .actionBar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 24px;
-    gap: 16px;
-    margin-top: 1.25rem;
-    .actionBar-left {
-      gap: 10px;
-    }
-    .actionBar-right {
-      gap: 12px;
-      .countBox {
-        gap: 5px;
-      }
-    }
-  }
-  .contentArea {
-    .scriptsList {
-      gap: 20px;
-      .scriptCard {
-        position: relative;
-      }
-      .content {
-        display: -webkit-box;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-        -webkit-line-clamp: 1;
-      }
-      .cardHeader {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        width: 100%;
-        .cardTitle {
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          flex: 1;
-        }
-        .cardCheckbox {
-          flex-shrink: 0;
-          margin-left: 12px;
-        }
-      }
-      .assetTags {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin-top: 8px;
-      }
-      .del {
-        text-align: right;
-        opacity: 0.6;
-        transition: opacity 0.2s;
-      }
-      .del:hover {
-        opacity: 1;
-      }
-    }
-    .emptyState {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 600px;
-    }
-  }
-}
-
-.settingDialogContent {
-  padding: 16px 0;
-  .settingItem {
-    gap: 12px;
-    margin-bottom: 16px;
-    &:last-child {
-      margin-bottom: 0;
-    }
-    .settingLabel {
-      white-space: nowrap;
-      min-width: 80px;
-    }
-  }
-}
-.settingDialogFooter {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 24px;
-}
-</style>
